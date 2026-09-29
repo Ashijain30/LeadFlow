@@ -1,0 +1,36 @@
+.app-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 24px;
+}
+
+.app-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  font-size: 1.8rem;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.app-subtitle {
+  color: #6b7280;
+  margin: 0;
+}
+
+.status-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.status-card h2 {
+  font-size: 1.25rem;
+  color: #059669;
+  margin-top: 0;
+}
