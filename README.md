@@ -1,6 +1,6 @@
-# Masal AI — Real Estate Lead Prioritization & Assistant
+# LeadFlow — AI-Powered Real Estate Sales Copilot
 
-An intelligent, full-stack AI application designed to help real-estate sales representatives understand, prioritize, and act on inbound property leads.
+A minimal, high-velocity CRM & AI sales copilot designed for real-estate sales professionals to prioritize high-intent buyers, master customer conversations, and execute timely follow-ups.
 
 ---
 
@@ -8,14 +8,15 @@ An intelligent, full-stack AI application designed to help real-estate sales rep
 
 Real estate sales professionals receive dozens of unstructured inquiries across WhatsApp, property portals (99acres, MagicBricks), and landing pages. Many leads are window-shoppers, while high-intent buyers slip through the cracks due to delayed follow-ups.
 
-**Masal AI** solves this by:
+**LeadFlow** solves this with a calm, high-efficiency B2B SaaS workflow:
 1. **Capturing inbound leads** with structured criteria (Budget, Timeline, Locality, Specifications, Raw Customer Message).
 2. **Generating AI sales intelligence** using Google Gemini (Structured Executive Summary, Buying Intent, Key Requirements, Objections/Concerns, Tactical Next Action, and Suggested Response).
 3. **Transparent Lead Prioritization** (`HOT`, `WARM`, `COLD`) using an explainable, multi-factor scoring mechanism based on purchase urgency, budget specificity, and engagement signals.
-4. **AI Priority Queue ("Next Actions")**: Dynamically surfaces the top 3 leads needing immediate salesperson action based on scheduled follow-ups, urgency, and priority tier.
-5. **Smart Follow-up Scheduling & Contact Tracking**: In-app scheduling ("Today 5 PM", "Tomorrow 11 AM", "In 2 Days", Custom) with 1-click contact logging (`lastContactedAt`, `nextFollowUpAt`).
-6. **Lead-Specific Conversational Co-Pilot**: An interactive sales assistant grounded exclusively in the selected lead's facts and objections.
-7. **AI Follow-up Generator**: Instant custom messaging across **WhatsApp**, **Email**, and **Call Scripts** in 4 tailored tones (**Professional**, **Friendly**, **Assertive**, **Urgent**).
+4. **Follow-up Reminders (Required Custom Feature)**: Dynamically surfaces upcoming and overdue follow-up touchpoints (`Today 2:00 PM`, `Overdue`, `Tomorrow`) with 1-click `[Done]` contact logging.
+5. **Interactive Pipeline Summary**: Four compact stat cards (`TOTAL`, `HOT`, `WARM`, `COLD`) that double as instantaneous pipeline filters.
+6. **Structured Two-Column Dossier**: Clean visual hierarchy separating AI strategy (Summary, Intent, Requirements, Concerns, Next Action, Suggested Response) from Lead Info and original Customer Messages.
+7. **Lead-Specific Conversational Co-Pilot**: An interactive sales assistant grounded exclusively in the selected lead's facts and objections with quick prompt pills.
+8. **AI Follow-up Studio**: Instant custom messaging across **WhatsApp**, **Email**, and **Call Scripts** in 4 tailored tones (**Professional**, **Friendly**, **Assertive**, **Urgent**).
 
 ---
 

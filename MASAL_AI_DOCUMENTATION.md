@@ -449,6 +449,87 @@ Real estate transactions are lost when salespeople fail to follow up at the agre
 
 ---
 
+## 11. LeadFlow Final UI/UX Architecture & Product Design
+
+### 11.1 Design Philosophy: Black + Warm Light Cream + Muted Gray
+Rather than an academic AI project or a blue/purple landing page, LeadFlow is engineered to feel like a high-end, calm, distraction-free B2B productivity tool.
+* **Background**: Warm light cream (`#F7F3EA`) reduces eye fatigue during extended sales sessions.
+* **Surfaces**: Crisp warm off-white (`#FFFDF8`) with razor-thin borders (`#E5E0D6`) and subtle micro-shadows (`0 1px 3px rgba(0,0,0,0.03)`).
+* **Primary Contrast**: Solid dark black (`#111111`) for primary actions and page headers, providing immediate visual anchoring.
+* **Restrained Status Badges**: Muted, desaturated badge backgrounds (`HOT`: `#FCE8E8` / `#A94442`, `WARM`: `#FEF3DC` / `#A66A16`, `COLD`: `#ECE8E1` / `#6B6B65`) that guide priority attention without rainbow clutter.
+
+---
+
+### 11.2 Core Information Architecture & Components
+
+#### 1. Global Shell & Header
+* **Branding**: `LeadFlow` (22px bold) with subtitle `AI-powered real estate sales copilot` (12px secondary).
+* **Action Area**: High-contrast black button `+ Add Lead` directly accessible on the main dashboard; transforms to `← Back to Leads` inside sub-views.
+* **Contained Width**: Centered layout constrained to a maximum of 1240px to eliminate wide-screen scanning fatigue.
+
+#### 2. Pipeline Summary (Interactive Filter Stat Cards)
+* **Four Compact Cards**: `TOTAL (5)` · `HOT (3)` · `WARM (2)` · `COLD (0)`.
+* **Dual Purpose**: Serves as both an instantaneous at-a-glance health check of the pipeline and an interactive one-click filter. Active filters are highlighted with a 1px solid black border.
+
+#### 3. Follow-up Reminders (Required Own Feature)
+* **The Salesperson's Daily Starting Point**: Answers the core operational question: *"Who do I contact next? How? When?"*
+* **Dynamic Time Tiers**: Evaluates stored `next_follow_up_at` against current time:
+  * **OVERDUE**: Missed schedule (soft red alert).
+  * **TODAY**: Scheduled for today with exact time (e.g. `Today 2:00 PM`).
+  * **TOMORROW**: Due on the next calendar day.
+* **One-Click Actionability**:
+  * `[Open]`: Navigates immediately to the lead's intelligence dossier.
+  * `[✓] (Done)`: Immediately records `last_contacted_at` as the current timestamp and removes the completed lead from the urgent attention queue.
+* **Why This Feature Drives Sales Performance**: Real-estate deals are won or lost on response latency. Inbound buyers typically inquire with 3–5 competing developers. Sales reps who call back within hours or adhere to agreed callback appointments close up to 70% more site visits.
+
+#### 4. Leads Section & Search Toolbar
+* **Clear Header**: `LEADS` with an intuitive search input (`Search leads...`) and priority filter pills (`All`, `Hot`, `Warm`, `Cold`).
+* **Instant Client Filtering**: Searches across names, localities, budget bands, and customer messages with zero network roundtrips.
+
+#### 5. Concise Lead Cards (Strict 7-Item Hierarchy)
+* Eliminates cognitive overload by banning long paragraphs, score formulas, or raw quotes from card faces:
+  1. **Customer Name** & subtle **Priority Badge** (`Rahul Sharma` · `HOT`)
+  2. **Location · Budget** (`Bengaluru · ₹85L–₹95L`)
+  3. **Property Requirement** (`2 BHK · Whitefield`)
+  4. **AI Summary**: 1–2 concise lines (max 12–15 words derived via `getShortLeadSummary(lead)`, e.g., *"Ready to buy soon; wants verified options."*)
+  5. **Next Action**: 2–4 punchy words (`Call within 2h`)
+  6. **Direct Quick Actions**: `[View]` `[Chat]` `[Follow-up]`
+
+#### 6. Structured Lead Details (Two-Column Desktop Dossier)
+Replaces the chaotic vertical wall of text with an organized, two-column executive dossier:
+* **Top Navigation & Actions**:
+  * `← Back to Leads`
+  * Prominent Lead Name + Priority Badge + Locality/Budget subline
+  * Action controls: `[Re-analyze]` (secondary), `[AI Chat]` (secondary), `[Generate Follow-up]` (primary black button), and subtle trash icon for deletion.
+* **Left Column (AI Intelligence & Strategy)**:
+  1. `AI SUMMARY`: High-visibility executive card (1–2 concise sentences).
+  2. `CUSTOMER INTENT`: Crisp statement of buying motivation.
+  3. `KEY REQUIREMENTS`: Clean bullet points (`• 2 BHK`, `• Whitefield`, etc.).
+  4. `CONCERNS`: Specific buyer objections requiring objection handling.
+  5. `NEXT ACTION`: Recommended tactical next step.
+  6. `SUGGESTED RESPONSE`: AI-drafted first message with 1-click clipboard copy.
+* **Right Column (Lead Info & Action Tracking)**:
+  1. `LEAD INFO`: Key-value pairs for Location, Budget, Property, Timeline, and Date Added.
+  2. `FOLLOW-UP`: Current schedule, last contacted timestamp, and quick buttons `[Mark Contacted]` and `[Schedule]` (preset modal: Today 5 PM, Tomorrow 11 AM, In 2 Days, Custom).
+  3. `CUSTOMER MESSAGE`: Original inbound inquiry isolated in a subtle quote block.
+
+#### 7. AI Sales Copilot (`LeadChat`)
+* Redesigned in the Black + Cream aesthetic.
+* Quick coaching prompt pills: *"What should I say?"*, *"Make it assertive"*, *"Summarize"*, *"Handle objection"*.
+* Fully grounded in the lead's stored requirements and objections, preventing generic advice.
+
+#### 8. Follow-up Generator (`FollowUpGenerator`)
+* Multi-channel selector: WhatsApp, Email, Call Script.
+* Strategic tone selector: Professional, Friendly, Assertive, Urgent.
+* Formats ready-to-dispatch messages with 1-click copy.
+
+#### 9. Responsive Layout Behavior
+* **Desktop (>=1024px)**: 3-column leads grid; 2-column Lead Details (60/40 split).
+* **Tablet (768px–1023px)**: 2-column leads grid; stacked Lead Details.
+* **Mobile (<768px)**: 1-column layout throughout, horizontal scroll on prompt pills, full-width touch targets.
+
+---
+
 ## Technical Interview Preparation (Q&A)
 
 ### React & Frontend
