@@ -96,13 +96,13 @@ export default function AddLead({ onSaveLead, onCancel }) {
     <div className="add-lead-page">
       <div className="page-header-row">
         <button type="button" className="btn btn-secondary btn-sm" onClick={onCancel}>
-          <ArrowLeft size={16} />
-          <span>Back</span>
+          <ArrowLeft size={14} />
+          <span>Back to Leads</span>
         </button>
         <div>
-          <h2 className="page-title">Add New Inbound Lead</h2>
+          <h2 className="page-title">Add New Lead</h2>
           <p className="page-subtitle">
-            Enter customer details to instantly evaluate pipeline priority and generate AI analysis.
+            Capture inbound lead details to evaluate pipeline priority and generate AI strategy.
           </p>
         </div>
       </div>

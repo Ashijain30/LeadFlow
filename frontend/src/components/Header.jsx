@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 
 export default function Header({ currentView, onNavigate }) {
   return (
@@ -11,9 +11,6 @@ export default function Header({ currentView, onNavigate }) {
           role="button"
           tabIndex={0}
         >
-          <div className="brand-icon-wrapper">
-            <Building2 className="brand-icon" size={18} />
-          </div>
           <div className="brand-text">
             <span className="brand-title">LeadFlow</span>
             <span className="brand-tagline">AI-powered real estate sales copilot</span>
@@ -28,7 +25,7 @@ export default function Header({ currentView, onNavigate }) {
               onClick={() => onNavigate('dashboard')}
             >
               <ArrowLeft size={14} />
-              <span>Back</span>
+              <span>Back to Leads</span>
             </button>
           ) : (
             <button

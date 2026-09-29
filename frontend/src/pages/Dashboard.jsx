@@ -18,21 +18,22 @@ export default function Dashboard({
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
 
-  // Compute pipeline counts
+  // Compute pipeline statistics
   const counts = useMemo(() => {
     return {
       total: leads.length,
-      hot: leads.filter((l) => l.priority === 'HOT').length,
-      warm: leads.filter((l) => l.priority === 'WARM').length,
-      cold: leads.filter((l) => l.priority === 'COLD').length,
+      hot: leads.filter((l) => (l.priority || '').toUpperCase() === 'HOT').length,
+      warm: leads.filter((l) => (l.priority || '').toUpperCase() === 'WARM').length,
+      cold: leads.filter((l) => (l.priority || '').toUpperCase() === 'COLD').length,
     };
   }, [leads]);
 
-  // Filter leads based on search query and priority tab
+  // Filter leads based on priority and search query
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
+      const p = (lead.priority || 'WARM').toUpperCase();
       const matchesPriority =
-        priorityFilter === 'ALL' || lead.priority === priorityFilter;
+        priorityFilter === 'ALL' || p === priorityFilter;
 
       if (!matchesPriority) return false;
 
@@ -60,30 +61,27 @@ export default function Dashboard({
 
   return (
     <div className="dashboard-page">
-      {/* 1. Pipeline Summary Bar */}
+      {/* 1. Pipeline Summary Stat Cards */}
       <SummaryCards
         counts={counts}
         activeFilter={priorityFilter}
         onSelectFilter={setPriorityFilter}
       />
 
-      {/* 2. Smart Follow-ups (Required Own Feature) */}
+      {/* 2. Follow-up Reminders (Required Own Feature) */}
       <SmartFollowUps
         leads={leads}
         onViewDetails={onViewDetails}
         onMarkDone={onMarkDone}
       />
 
-      {/* 3. Leads Section Header & Compact Toolbar */}
-      <div className="leads-section">
+      {/* 3. Leads Section */}
+      <section className="leads-section" aria-label="Leads Pipeline">
         <div className="leads-section-header">
-          <div className="leads-title-row">
-            <span className="leads-main-title">LEADS</span>
-            <span className="leads-count-tag">{filteredLeads.length} leads</span>
-          </div>
+          <h2 className="section-title">LEADS</h2>
         </div>
 
-        {/* Compact Search & Filter Toolbar */}
+        {/* Search & Filter Toolbar */}
         <div className="search-filter-toolbar">
           <div className="search-input-wrapper">
             <Search size={14} className="search-icon" />
@@ -107,14 +105,19 @@ export default function Dashboard({
           </div>
 
           <div className="filter-pill-group">
-            {['ALL', 'HOT', 'WARM', 'COLD'].map((tab) => (
+            {[
+              { id: 'ALL', label: 'All' },
+              { id: 'HOT', label: 'Hot' },
+              { id: 'WARM', label: 'Warm' },
+              { id: 'COLD', label: 'Cold' },
+            ].map(({ id, label }) => (
               <button
-                key={tab}
+                key={id}
                 type="button"
-                className={`filter-tab-pill ${priorityFilter === tab ? 'is-active' : ''}`}
-                onClick={() => setPriorityFilter(tab)}
+                className={`filter-pill ${priorityFilter === id ? 'is-active' : ''}`}
+                onClick={() => setPriorityFilter(id)}
               >
-                {tab}
+                {label}
               </button>
             ))}
           </div>
@@ -131,11 +134,11 @@ export default function Dashboard({
           )}
         </div>
 
-        {/* 4. Leads Grid (3-column on desktop) */}
+        {/* 4. Leads Grid (3 cols desktop, 2 cols tablet, 1 col mobile) */}
         {isLoading && leads.length === 0 ? (
           <div className="loading-state-card">
             <div className="spinner"></div>
-            <p>Loading leads...</p>
+            <p>Loading pipeline...</p>
           </div>
         ) : filteredLeads.length > 0 ? (
           <div className="leads-grid">
@@ -161,7 +164,7 @@ export default function Dashboard({
             isSearchOrFilter={searchQuery !== '' || priorityFilter !== 'ALL'}
           />
         )}
-      </div>
+      </section>
     </div>
   );
 }

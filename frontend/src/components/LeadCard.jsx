@@ -1,21 +1,21 @@
 import React from 'react';
 import PriorityBadge from './PriorityBadge';
-import { getShortSummary, formatShortNextAction } from '../utils/leadHelpers';
+import { getShortLeadSummary, formatShortNextAction } from '../utils/leadHelpers';
 
 /**
- * Minimal, high-scannability Lead Card matching the required structure:
+ * Concise Lead Card strictly adhering to the 7-item hierarchy:
  *
  * Rahul Sharma                         HOT
  * Bengaluru · ₹85L–₹95L
  * 2 BHK · Whitefield
  *
- * AI Summary
+ * AI SUMMARY
  * Ready to buy soon; wants verified options.
  *
- * Next
+ * NEXT
  * Call within 2h
  *
- * [Open] [Chat] [Follow-up]
+ * [View] [Chat] [Follow-up]
  */
 export default function LeadCard({
   lead,
@@ -42,14 +42,19 @@ export default function LeadCard({
     analysis?.recommended_next_action ||
     'Call within 2h';
 
-  const shortSummary = getShortSummary(lead);
+  const shortSummary = getShortLeadSummary(lead);
   const shortAction = formatShortNextAction(rawAction);
 
   return (
     <div className="lead-card">
-      {/* 1. Name & Priority Badge */}
+      {/* 1. Name & Priority */}
       <div className="lead-card-header">
-        <h3 className="lead-name" onClick={() => onViewDetails(id)}>
+        <h3
+          className="lead-name"
+          onClick={() => onViewDetails(id)}
+          role="button"
+          tabIndex={0}
+        >
           {name}
         </h3>
         <PriorityBadge priority={priority} size="sm" />
@@ -68,25 +73,25 @@ export default function LeadCard({
       </div>
 
       {/* 4. AI Summary */}
-      <div className="lead-summary-section">
-        <span className="card-section-label">AI Summary</span>
+      <div className="lead-card-section">
+        <span className="card-section-label">AI SUMMARY</span>
         <p className="card-summary-text">{shortSummary}</p>
       </div>
 
       {/* 5. Next Action */}
-      <div className="lead-next-section">
-        <span className="card-section-label">Next</span>
+      <div className="lead-card-section">
+        <span className="card-section-label">NEXT</span>
         <p className="card-next-text">{shortAction}</p>
       </div>
 
-      {/* 6. Three Compact Actions: [Open] [Chat] [Follow-up] */}
+      {/* 6. Three Actions: [View] [Chat] [Follow-up] */}
       <div className="lead-card-actions">
         <button
           type="button"
           className="btn btn-secondary btn-xs flex-1"
           onClick={() => onViewDetails(id)}
         >
-          Open
+          View
         </button>
 
         {onOpenChat && (

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Bot, User, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles } from 'lucide-react';
 import PriorityBadge from '../components/PriorityBadge';
 import { chatWithLead } from '../services/api';
 
@@ -13,7 +13,7 @@ export default function LeadChat({ lead, onBack }) {
     {
       id: 1,
       sender: 'assistant',
-      text: `Hello! I am your AI sales assistant for ${lead?.name || 'this customer'}. I have reviewed their inquiry for ${req} in ${loc} with budget ${budget} and timeline "${timeline}". How can I help you prepare or close this lead?`,
+      text: `Hello! I am your AI sales copilot for ${lead?.name || 'this customer'}. I have reviewed their inquiry for ${req} in ${loc} with budget ${budget} and timeline "${timeline}". How can I help you prepare or close this lead?`,
       timestamp: 'Just now',
     },
   ]);
@@ -33,18 +33,18 @@ export default function LeadChat({ lead, onBack }) {
     return (
       <div className="lead-chat-page">
         <p>Lead not found.</p>
-        <button type="button" className="btn btn-secondary" onClick={onBack}>
-          Back to Dashboard
+        <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
+          Back to Leads
         </button>
       </div>
     );
   }
 
-  const suggestedPrompts = [
-    'What should I emphasize on the call?',
-    "What are this customer's main concerns?",
-    'Make my reply more assertive.',
-    'What should I do next?',
+  const quickPrompts = [
+    'What should I say?',
+    'Make it assertive',
+    'Summarize',
+    'Handle objection',
   ];
 
   const handleSendMessage = async (textToSend) => {
@@ -63,7 +63,6 @@ export default function LeadChat({ lead, onBack }) {
     setIsTyping(true);
 
     try {
-      // Call real backend API
       const historyPayload = messages.map((m) => ({
         sender: m.sender,
         text: m.text,
@@ -80,7 +79,6 @@ export default function LeadChat({ lead, onBack }) {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       console.warn('Real AI chat endpoint error, using contextual fallback:', err);
-      // Fallback lead-grounded response
       const fallbackReply = `For ${lead.name} (${req} in ${loc}, budget ${budget}):
 Focus on locking in an inspection slot this weekend. Overcome their concerns around pricing clarity and confirmed RERA delivery timelines before negotiating discounts.`;
 
@@ -98,36 +96,35 @@ Focus on locking in an inspection slot this weekend. Overcome their concerns aro
 
   return (
     <div className="lead-chat-page">
-      {/* Top Banner with Lead Context */}
+      {/* Chat Header */}
       <div className="chat-header-bar">
         <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
-          <ArrowLeft size={16} />
+          <ArrowLeft size={14} />
           <span>Back to Lead</span>
         </button>
 
-        <div className="chat-lead-info">
-          <div className="chat-lead-title-row">
-            <span className="chat-lead-title">AI Sales Assistant for {lead.name}</span>
+        <div className="chat-header-title-group">
+          <div className="chat-title-line">
+            <span className="chat-brand-label">AI COPILOT</span>
+            <span className="dot-sep">·</span>
+            <span className="chat-lead-name">{lead.name}</span>
             <PriorityBadge priority={lead.priority} size="sm" />
           </div>
-          <span className="chat-lead-meta">
-            {req} • {loc} • Budget: {budget} • Timeline: {timeline}
+          <span className="chat-meta-subtitle">
+            {req} · {loc} · {budget}
           </span>
         </div>
       </div>
 
-      {/* Suggested Prompts Carousel */}
-      <div className="chat-suggestions-bar">
-        <div className="suggestions-label">
-          <Sparkles size={14} className="text-ai" />
-          <span>Quick Prompts:</span>
-        </div>
-        <div className="suggestions-scroll">
-          {suggestedPrompts.map((prompt, idx) => (
+      {/* Quick Prompts Bar */}
+      <div className="chat-quick-prompts-bar">
+        <span className="quick-prompts-label">Quick Prompts:</span>
+        <div className="quick-prompts-list">
+          {quickPrompts.map((prompt, idx) => (
             <button
               key={idx}
               type="button"
-              className="suggestion-chip"
+              className="quick-prompt-pill"
               onClick={() => handleSendMessage(prompt)}
             >
               {prompt}
@@ -145,17 +142,14 @@ Focus on locking in an inspection slot this weekend. Overcome their concerns aro
               key={msg.id}
               className={`chat-message-row ${isUser ? 'is-user' : 'is-assistant'}`}
             >
-              <div className="message-avatar">
-                {isUser ? <User size={16} /> : <Bot size={16} />}
-              </div>
               <div className="message-bubble-wrapper">
-                <div className="message-sender-name">
-                  {isUser ? 'You (Sales Rep)' : `AI Assistant (${lead.name})`}
-                </div>
+                <span className="message-sender-tag">
+                  {isUser ? 'You' : 'LeadFlow Copilot'}
+                </span>
                 <div className="message-bubble">
                   <p className="message-content">{msg.text}</p>
                 </div>
-                <div className="message-timestamp">{msg.timestamp}</div>
+                <span className="message-timestamp">{msg.timestamp}</span>
               </div>
             </div>
           );
@@ -163,10 +157,8 @@ Focus on locking in an inspection slot this weekend. Overcome their concerns aro
 
         {isTyping && (
           <div className="chat-message-row is-assistant">
-            <div className="message-avatar">
-              <Bot size={16} />
-            </div>
             <div className="message-bubble-wrapper">
+              <span className="message-sender-tag">LeadFlow Copilot</span>
               <div className="message-bubble typing-bubble">
                 <span className="typing-dot"></span>
                 <span className="typing-dot"></span>
@@ -179,7 +171,7 @@ Focus on locking in an inspection slot this weekend. Overcome their concerns aro
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
+      {/* Message Input */}
       <div className="chat-input-area">
         <form
           onSubmit={(e) => {
@@ -191,22 +183,19 @@ Focus on locking in an inspection slot this weekend. Overcome their concerns aro
           <input
             type="text"
             className="chat-input"
-            placeholder={`Ask a question or coaching prompt regarding ${lead.name}...`}
+            placeholder={`Ask a coaching question regarding ${lead.name}...`}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
           />
           <button
             type="submit"
-            className="btn btn-primary chat-send-btn"
+            className="btn btn-primary btn-sm chat-send-btn"
             disabled={!inputText.trim() || isTyping}
           >
             <span>Send</span>
-            <Send size={15} />
+            <Send size={13} />
           </button>
         </form>
-        <span className="chat-footer-hint">
-          Enter sends your question. AI uses this specific lead's stored requirements, budget, and context.
-        </span>
       </div>
     </div>
   );
