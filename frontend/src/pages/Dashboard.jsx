@@ -1,10 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { Search, SlidersHorizontal, Plus, RotateCw } from 'lucide-react';
 import SummaryCards from '../components/SummaryCards';
+import PriorityQueue from '../components/PriorityQueue';
 import LeadCard from '../components/LeadCard';
 import EmptyState from '../components/EmptyState';
 
-export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, onRefresh }) {
+export default function Dashboard({
+  leads,
+  isLoading,
+  onViewDetails,
+  onOpenChat,
+  onOpenFollowUp,
+  onAddLead,
+  onRefresh,
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
 
@@ -50,17 +59,24 @@ export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, 
 
   return (
     <div className="dashboard-page">
-      {/* Top summary cards */}
+      {/* 1. Compact Horizontal Pipeline Summary Strip */}
       <SummaryCards
         counts={counts}
         activeFilter={priorityFilter}
         onSelectFilter={setPriorityFilter}
       />
 
-      {/* Search and filter controls bar */}
+      {/* 2. AI Priority Queue ("Leads that need your attention next") */}
+      <PriorityQueue
+        leads={leads}
+        onViewDetails={onViewDetails}
+        onOpenFollowUp={onOpenFollowUp}
+      />
+
+      {/* 3. Search and filter controls bar */}
       <div className="filter-controls-bar">
         <div className="search-input-wrapper">
-          <Search size={18} className="search-icon" />
+          <Search size={17} className="search-icon" />
           <input
             type="text"
             className="search-input"
@@ -73,6 +89,7 @@ export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, 
               type="button"
               className="clear-search-btn"
               onClick={() => setSearchQuery('')}
+              title="Clear search"
             >
               ×
             </button>
@@ -80,7 +97,7 @@ export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, 
         </div>
 
         <div className="priority-filter-tabs">
-          <SlidersHorizontal size={15} className="filter-icon" />
+          <SlidersHorizontal size={14} className="filter-icon" />
           {['ALL', 'HOT', 'WARM', 'COLD'].map((tab) => (
             <button
               key={tab}
@@ -115,16 +132,28 @@ export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, 
         )}
       </div>
 
-      {/* Leads Section Header */}
+      {/* 4. Leads Section Grid */}
       <div className="leads-section">
         <div className="leads-section-header">
-          <h2 className="section-title">
-            Inbound Leads{' '}
-            <span className="leads-count-badge">({filteredLeads.length})</span>
-          </h2>
-          <span className="section-subtitle">
-            Prioritized by urgency, budget feasibility, and customer intent
-          </span>
+          <div className="leads-section-titles">
+            <h2 className="section-title">
+              Inbound Leads{' '}
+              <span className="leads-count-badge">({filteredLeads.length})</span>
+            </h2>
+            <span className="section-subtitle">
+              Prioritized by urgency, budget feasibility, and customer intent
+            </span>
+          </div>
+          {onAddLead && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={onAddLead}
+            >
+              <Plus size={14} />
+              <span>Add Lead</span>
+            </button>
+          )}
         </div>
 
         {isLoading && leads.length === 0 ? (
@@ -139,6 +168,8 @@ export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, 
                 key={lead.id}
                 lead={lead}
                 onViewDetails={onViewDetails}
+                onOpenChat={onOpenChat}
+                onOpenFollowUp={onOpenFollowUp}
               />
             ))}
           </div>

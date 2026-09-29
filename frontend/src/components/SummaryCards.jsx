@@ -1,65 +1,65 @@
 import React from 'react';
 import { Users, Flame, SunMedium, Snowflake } from 'lucide-react';
 
+/**
+ * Compact horizontal pipeline summary row for high scannability and fast filtering.
+ */
 export default function SummaryCards({ counts, activeFilter, onSelectFilter }) {
-  const cards = [
+  const items = [
     {
       id: 'ALL',
-      label: 'Total Leads',
+      label: 'All Leads',
       count: counts.total,
-      subtext: 'Active in pipeline',
       Icon: Users,
-      theme: 'summary-total',
+      colorClass: 'pill-all',
     },
     {
       id: 'HOT',
       label: 'Hot Leads',
       count: counts.hot,
-      subtext: 'High urgency (< 1-2 mos)',
       Icon: Flame,
-      theme: 'summary-hot',
+      colorClass: 'pill-hot',
     },
     {
       id: 'WARM',
       label: 'Warm Leads',
       count: counts.warm,
-      subtext: 'Evaluating (2-6 mos)',
       Icon: SunMedium,
-      theme: 'summary-warm',
+      colorClass: 'pill-warm',
     },
     {
       id: 'COLD',
       label: 'Cold Leads',
       count: counts.cold,
-      subtext: 'Exploratory (> 6 mos)',
       Icon: Snowflake,
-      theme: 'summary-cold',
+      colorClass: 'pill-cold',
     },
   ];
 
   return (
-    <div className="summary-cards-grid">
-      {cards.map((card) => {
-        const { id, label, count, subtext, Icon, theme } = card;
-        const isActive = activeFilter === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            className={`summary-card ${theme} ${isActive ? 'is-active' : ''}`}
-            onClick={() => onSelectFilter(id)}
-          >
-            <div className="summary-card-header">
-              <span className="summary-label">{label}</span>
-              <div className="summary-icon-pill">
-                <Icon size={18} />
-              </div>
-            </div>
-            <div className="summary-count">{count}</div>
-            <div className="summary-subtext">{subtext}</div>
-          </button>
-        );
-      })}
+    <div className="pipeline-summary-strip" role="region" aria-label="Pipeline overview">
+      <div className="pipeline-strip-left">
+        <span className="pipeline-label">Pipeline Overview</span>
+      </div>
+      <div className="pipeline-pills-row">
+        {items.map((item) => {
+          const { id, label, count, Icon, colorClass } = item;
+          const isActive = activeFilter === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              className={`pipeline-pill ${colorClass} ${isActive ? 'is-active' : ''}`}
+              onClick={() => onSelectFilter(id)}
+              aria-pressed={isActive}
+            >
+              <Icon size={14} className="pill-icon" />
+              <span className="pill-name">{label}</span>
+              <span className="pill-badge">{count}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

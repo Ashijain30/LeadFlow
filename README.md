@@ -12,8 +12,10 @@ Real estate sales professionals receive dozens of unstructured inquiries across 
 1. **Capturing inbound leads** with structured criteria (Budget, Timeline, Locality, Specifications, Raw Customer Message).
 2. **Generating AI sales intelligence** using Google Gemini (Structured Executive Summary, Buying Intent, Key Requirements, Objections/Concerns, Tactical Next Action, and Suggested Response).
 3. **Transparent Lead Prioritization** (`HOT`, `WARM`, `COLD`) using an explainable, multi-factor scoring mechanism based on purchase urgency, budget specificity, and engagement signals.
-4. **Lead-Specific Conversational Co-Pilot**: An interactive sales assistant grounded exclusively in the selected lead's facts and objections.
-5. **AI Follow-up Generator**: Instant custom messaging across **WhatsApp**, **Email**, and **Call Scripts** in 4 tailored tones (**Professional**, **Friendly**, **Assertive**, **Urgent**).
+4. **AI Priority Queue ("Next Actions")**: Dynamically surfaces the top 3 leads needing immediate salesperson action based on scheduled follow-ups, urgency, and priority tier.
+5. **Smart Follow-up Scheduling & Contact Tracking**: In-app scheduling ("Today 5 PM", "Tomorrow 11 AM", "In 2 Days", Custom) with 1-click contact logging (`lastContactedAt`, `nextFollowUpAt`).
+6. **Lead-Specific Conversational Co-Pilot**: An interactive sales assistant grounded exclusively in the selected lead's facts and objections.
+7. **AI Follow-up Generator**: Instant custom messaging across **WhatsApp**, **Email**, and **Call Scripts** in 4 tailored tones (**Professional**, **Friendly**, **Assertive**, **Urgent**).
 
 ---
 
@@ -188,6 +190,7 @@ npm run build --prefix frontend
 | `PUT` | `/api/leads/{id}` | Update lead details and recalculate priority |
 | `DELETE` | `/api/leads/{id}` | Delete lead permanently |
 | `POST` | `/api/leads/{id}/analyze` | Trigger re-analysis using Gemini |
+| `PUT` | `/api/leads/{id}/schedule` | Update `last_contacted_at` or `next_follow_up_at` |
 | `POST` | `/api/leads/{id}/chat` | Ask salesperson questions grounded in the lead |
 | `POST` | `/api/leads/{id}/follow-up` | Generate WhatsApp, Email, or Call Script follow-ups |
 

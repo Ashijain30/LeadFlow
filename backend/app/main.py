@@ -9,11 +9,31 @@ from app.services.lead_service import seed_default_leads_if_empty
 settings = get_settings()
 
 
+from sqlalchemy import text
+
+
+def ensure_db_schema():
+    """Ensure tables exist and add new nullable columns safely if migrating existing SQLite DB."""
+    Base.metadata.create_all(bind=engine)
+    try:
+        with engine.connect() as conn:
+            cursor = conn.execute(text("PRAGMA table_info(leads)"))
+            columns = [row[1] for row in cursor.fetchall()]
+            if columns:  # table exists
+                if "last_contacted_at" not in columns:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN last_contacted_at DATETIME"))
+                if "next_follow_up_at" not in columns:
+                    conn.execute(text("ALTER TABLE leads ADD COLUMN next_follow_up_at DATETIME"))
+                conn.commit()
+    except Exception as e:
+        # Pass silently for non-SQLite or if columns already exist
+        pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan context: create tables and seed initial leads idempotently."""
-    # Ensure tables exist
-    Base.metadata.create_all(bind=engine)
+    """Application lifespan context: create tables, run safe column migrations, and seed initial leads idempotently."""
+    ensure_db_schema()
     # Seed default sample leads if database is fresh
     db = SessionLocal()
     try:

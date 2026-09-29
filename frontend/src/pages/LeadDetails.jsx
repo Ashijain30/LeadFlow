@@ -17,6 +17,9 @@ import {
   RefreshCw,
   Trash2,
   Info,
+  CalendarClock,
+  Calendar,
+  X,
 } from 'lucide-react';
 import PriorityBadge from '../components/PriorityBadge';
 
@@ -27,10 +30,15 @@ export default function LeadDetails({
   onOpenFollowUp,
   onDeleteLead,
   onReanalyzeLead,
+  onScheduleFollowUp,
 }) {
   const [copiedResponse, setCopiedResponse] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [customDateTime, setCustomDateTime] = useState('');
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleSuccess, setScheduleSuccess] = useState('');
 
   if (!lead) {
     return (
@@ -61,6 +69,10 @@ export default function LeadDetails({
     priority_reason,
     aiAnalysis,
     ai_analysis,
+    lastContactedAt,
+    last_contacted_at,
+    nextFollowUpAt,
+    next_follow_up_at,
   } = lead;
 
   const req = propertyRequirement || property_requirement;
@@ -68,6 +80,8 @@ export default function LeadDetails({
   const msg = customerMessage || customer_message;
   const reason = priorityReason || priority_reason;
   const analysis = aiAnalysis || ai_analysis;
+  const lastContacted = lastContactedAt || last_contacted_at;
+  const nextFollowUp = nextFollowUpAt || next_follow_up_at;
 
   const keyReqs = analysis?.key_requirements || analysis?.keyRequirements || [];
   const objections = analysis?.objections || [];
@@ -97,6 +111,63 @@ export default function LeadDetails({
   const handleDeleteConfirm = () => {
     if (onDeleteLead) {
       onDeleteLead(id);
+    }
+  };
+
+  const handleMarkContactedToday = async () => {
+    if (!onScheduleFollowUp) return;
+    setIsScheduling(true);
+    try {
+      await onScheduleFollowUp(id, {
+        lastContactedAt: new Date().toISOString(),
+      });
+      setScheduleSuccess('Contact recorded for today.');
+      setTimeout(() => setScheduleSuccess(''), 2500);
+    } catch (err) {
+      console.error('Failed to update contact date:', err);
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleApplySchedule = async (preset) => {
+    if (!onScheduleFollowUp) return;
+    setIsScheduling(true);
+    let targetIso = null;
+    const now = new Date();
+
+    if (preset === 'today-5pm') {
+      const d = new Date();
+      d.setHours(17, 0, 0, 0);
+      if (d <= now) d.setDate(d.getDate() + 1);
+      targetIso = d.toISOString();
+    } else if (preset === 'tomorrow-11am') {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(11, 0, 0, 0);
+      targetIso = d.toISOString();
+    } else if (preset === 'in-2days') {
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      d.setHours(11, 0, 0, 0);
+      targetIso = d.toISOString();
+    } else if (preset === 'clear') {
+      targetIso = null;
+    } else if (customDateTime) {
+      targetIso = new Date(customDateTime).toISOString();
+    }
+
+    try {
+      await onScheduleFollowUp(id, {
+        nextFollowUpAt: targetIso,
+      });
+      setShowScheduleModal(false);
+      setScheduleSuccess(targetIso ? 'Follow-up scheduled!' : 'Follow-up cleared.');
+      setTimeout(() => setScheduleSuccess(''), 2500);
+    } catch (err) {
+      console.error('Failed to schedule follow-up:', err);
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -151,7 +222,7 @@ export default function LeadDetails({
           </div>
         </div>
 
-        {/* Delete Confirmation Modal / Banner */}
+        {/* Delete Confirmation Banner */}
         {showDeleteConfirm && (
           <div className="delete-confirm-banner">
             <div className="delete-confirm-text">
@@ -223,6 +294,81 @@ export default function LeadDetails({
           </div>
         </div>
 
+        {/* Follow-up & Contact Tracking Bar */}
+        <div className="lead-tracking-bar">
+          <div className="tracking-item">
+            <div className="tracking-meta">
+              <CalendarClock size={15} className="tracking-icon text-ai" />
+              <span className="tracking-title">Next Scheduled Follow-up</span>
+            </div>
+            <div className="tracking-value">
+              {nextFollowUp ? (
+                <span className="scheduled-tag">
+                  {new Date(nextFollowUp).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              ) : (
+                <span className="text-muted">None scheduled</span>
+              )}
+            </div>
+          </div>
+
+          <div className="tracking-item">
+            <div className="tracking-meta">
+              <Clock size={15} className="tracking-icon text-muted" />
+              <span className="tracking-title">Last Contacted</span>
+            </div>
+            <div className="tracking-value">
+              {lastContacted ? (
+                <span className="contacted-tag">
+                  {new Date(lastContacted).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              ) : (
+                <span className="text-muted">Not contacted yet</span>
+              )}
+            </div>
+          </div>
+
+          <div className="tracking-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleMarkContactedToday}
+              disabled={isScheduling}
+              title="Record contact attempt today"
+            >
+              <Check size={14} />
+              <span>Mark Contacted</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setShowScheduleModal(true)}
+              disabled={isScheduling}
+            >
+              <CalendarClock size={14} />
+              <span>{nextFollowUp ? 'Reschedule' : 'Schedule Follow-up'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Schedule Success Alert */}
+        {scheduleSuccess && (
+          <div className="schedule-success-toast">
+            <Check size={14} className="text-success" />
+            <span>{scheduleSuccess}</span>
+          </div>
+        )}
+
         {/* Customer Inbound Message Box */}
         <div className="inbound-message-box">
           <div className="inbound-message-header">
@@ -232,6 +378,104 @@ export default function LeadDetails({
           <blockquote className="inbound-quote">"{msg}"</blockquote>
         </div>
       </div>
+
+      {/* Schedule Follow-up Modal */}
+      {showScheduleModal && (
+        <div className="modal-backdrop" onClick={() => setShowScheduleModal(false)}>
+          <div className="schedule-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <CalendarClock size={18} className="text-ai" />
+                <h3 className="modal-title">Schedule Follow-up for {name}</h3>
+              </div>
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={() => setShowScheduleModal(false)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="modal-description">
+              Choose a quick preset or pick a specific date and time to keep this lead on track.
+            </p>
+
+            <div className="preset-buttons-grid">
+              <button
+                type="button"
+                className="preset-btn"
+                onClick={() => handleApplySchedule('today-5pm')}
+                disabled={isScheduling}
+              >
+                <span>Today</span>
+                <strong>5:00 PM</strong>
+              </button>
+              <button
+                type="button"
+                className="preset-btn"
+                onClick={() => handleApplySchedule('tomorrow-11am')}
+                disabled={isScheduling}
+              >
+                <span>Tomorrow</span>
+                <strong>11:00 AM</strong>
+              </button>
+              <button
+                type="button"
+                className="preset-btn"
+                onClick={() => handleApplySchedule('in-2days')}
+                disabled={isScheduling}
+              >
+                <span>In 2 Days</span>
+                <strong>11:00 AM</strong>
+              </button>
+            </div>
+
+            <div className="custom-schedule-box">
+              <label htmlFor="custom-datetime" className="custom-schedule-label">
+                Or select custom date & time:
+              </label>
+              <div className="custom-datetime-row">
+                <input
+                  id="custom-datetime"
+                  type="datetime-local"
+                  className="datetime-input"
+                  value={customDateTime}
+                  onChange={(e) => setCustomDateTime(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleApplySchedule('custom')}
+                  disabled={!customDateTime || isScheduling}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+
+            <div className="modal-footer-actions">
+              {nextFollowUp && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm text-danger"
+                  onClick={() => handleApplySchedule('clear')}
+                  disabled={isScheduling}
+                >
+                  Clear Follow-up
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowScheduleModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Lead Analysis Section */}
       <div className="ai-analysis-container">

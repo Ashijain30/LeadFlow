@@ -6,7 +6,7 @@ import LeadDetails from './pages/LeadDetails';
 import LeadChat from './pages/LeadChat';
 import FollowUpGenerator from './pages/FollowUpGenerator';
 import { initialMockLeads } from './data/mockLeads';
-import { getLeads, createLead, deleteLead, reanalyzeLead } from './services/api';
+import { getLeads, createLead, deleteLead, reanalyzeLead, scheduleFollowUp } from './services/api';
 import './App.css';
 
 export default function App() {
@@ -117,6 +117,23 @@ export default function App() {
     }
   };
 
+  const handleScheduleFollowUp = async (id, scheduleData) => {
+    try {
+      const updated = await scheduleFollowUp(id, scheduleData);
+      setLeads((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      return updated;
+    } catch (err) {
+      console.warn('Backend follow-up schedule failed, applying local update:', err);
+      const updated = {
+        ...(leads.find((l) => l.id === id) || {}),
+        lastContactedAt: scheduleData.lastContactedAt !== undefined ? scheduleData.lastContactedAt : undefined,
+        nextFollowUpAt: scheduleData.nextFollowUpAt !== undefined ? scheduleData.nextFollowUpAt : undefined,
+      };
+      setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...updated } : l)));
+      return updated;
+    }
+  };
+
   const handleBackToLead = () => {
     if (selectedLeadId) {
       handleNavigate('lead-details');
@@ -144,6 +161,8 @@ export default function App() {
             leads={leads}
             isLoading={isLoading}
             onViewDetails={handleViewDetails}
+            onOpenChat={handleOpenChat}
+            onOpenFollowUp={handleOpenFollowUp}
             onAddLead={() => handleNavigate('add-lead')}
             onRefresh={() => refreshLeads()}
           />
@@ -164,6 +183,7 @@ export default function App() {
             onOpenFollowUp={handleOpenFollowUp}
             onDeleteLead={handleDeleteLead}
             onReanalyzeLead={handleReanalyzeLead}
+            onScheduleFollowUp={handleScheduleFollowUp}
           />
         )}
 

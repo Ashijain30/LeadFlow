@@ -247,3 +247,27 @@ def test_priority_scoring_function():
     )
     assert p2 == "COLD"
     assert "exploratory" in r2.lower()
+
+
+def test_schedule_lead_followup_endpoint(client):
+    """Verify PUT /api/leads/{id}/schedule updates next_follow_up_at and last_contacted_at."""
+    payload = {
+        "name": "Anil Kapoor",
+        "location": "Mumbai",
+        "property_requirement": "4 BHK",
+        "budget": "₹6 Cr",
+        "buying_timeline": "Immediate",
+        "customer_message": "Call me tomorrow 11 AM.",
+    }
+    created = client.post("/api/leads", json=payload).json()
+    lead_id = created["id"]
+    assert created["next_follow_up_at"] is None
+
+    sched_res = client.put(
+        f"/api/leads/{lead_id}/schedule",
+        json={"next_follow_up_at": "2026-10-01T11:00:00Z", "last_contacted_at": "2026-09-30T10:00:00Z"},
+    )
+    assert sched_res.status_code == 200
+    data = sched_res.json()
+    assert data["next_follow_up_at"] is not None
+    assert data["last_contacted_at"] is not None

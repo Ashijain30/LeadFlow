@@ -17,6 +17,8 @@ export function normalizeLead(lead) {
     customerMessage: lead.customer_message || lead.customerMessage || '',
     priorityReason: lead.priority_reason || lead.priorityReason || '',
     aiAnalysis: lead.ai_analysis || lead.aiAnalysis || null,
+    lastContactedAt: lead.last_contacted_at || lead.lastContactedAt || null,
+    nextFollowUpAt: lead.next_follow_up_at || lead.nextFollowUpAt || null,
   };
 }
 
@@ -152,4 +154,21 @@ export async function generateFollowUp(id, channel, tone, instruction = '') {
     body: JSON.stringify({ channel, tone, instruction }),
   });
   return handleResponse(res);
+}
+
+/**
+ * PUT /api/leads/:id/schedule
+ */
+export async function scheduleFollowUp(id, nextFollowUpAt, lastContactedAt = null) {
+  const url = `${API_BASE}/api/leads/${id}/schedule`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      next_follow_up_at: nextFollowUpAt,
+      last_contacted_at: lastContactedAt,
+    }),
+  });
+  const data = await handleResponse(res);
+  return normalizeLead(data);
 }

@@ -41,6 +41,15 @@ class LeadUpdate(BaseModel):
     customer_message: Optional[str] = Field(None, min_length=1)
     priority: Optional[str] = None
     priority_reason: Optional[str] = None
+    last_contacted_at: Optional[datetime] = None
+    next_follow_up_at: Optional[datetime] = None
+
+
+class FollowUpScheduleRequest(BaseModel):
+    """Payload to schedule or update next follow-up."""
+
+    next_follow_up_at: Optional[datetime] = Field(None, description="Scheduled follow-up datetime")
+    last_contacted_at: Optional[datetime] = Field(None, description="Timestamp when lead was contacted")
 
 
 class LeadResponse(LeadBase):
@@ -50,6 +59,8 @@ class LeadResponse(LeadBase):
     priority: str
     priority_reason: Optional[str] = None
     ai_analysis: Optional[Dict[str, Any]] = None
+    last_contacted_at: Optional[datetime] = None
+    next_follow_up_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

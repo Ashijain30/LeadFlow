@@ -10,6 +10,7 @@ from app.schemas import (
     LeadChatResponse,
     FollowUpRequest,
     FollowUpResponse,
+    FollowUpScheduleRequest,
 )
 from app.services import lead_service, ai_service
 
@@ -48,6 +49,26 @@ def get_lead(lead_id: int, db: Session = Depends(get_db)):
 def update_lead(lead_id: int, lead_in: LeadUpdate, db: Session = Depends(get_db)):
     """Update lead details and re-evaluate priority if necessary."""
     updated = lead_service.update_lead(db, lead_id, lead_in)
+    if not updated:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Lead with ID {lead_id} not found",
+        )
+    return updated
+
+
+@router.put("/{lead_id}/schedule", response_model=LeadResponse)
+def schedule_lead_followup(
+    lead_id: int,
+    schedule_in: FollowUpScheduleRequest,
+    db: Session = Depends(get_db),
+):
+    """Schedule next follow-up and/or update contact timestamp."""
+    update_data = LeadUpdate(
+        next_follow_up_at=schedule_in.next_follow_up_at,
+        last_contacted_at=schedule_in.last_contacted_at,
+    )
+    updated = lead_service.update_lead(db, lead_id, update_data)
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

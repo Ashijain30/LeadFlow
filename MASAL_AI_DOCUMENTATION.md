@@ -363,30 +363,58 @@ Salesperson selects Channel (WhatsApp) & Tone (Urgent)
 | `priority` | String(20) | Not Null, Default 'WARM' | `HOT`, `WARM`, or `COLD` |
 | `priority_reason` | Text | Nullable | Human-readable scoring explanation |
 | `ai_analysis` | JSON | Nullable | Stored 6-part AI analysis object |
+| `last_contacted_at` | DateTime | Nullable | Timestamp of last sales contact |
+| `next_follow_up_at` | DateTime | Nullable | Timestamp of next scheduled follow-up |
 | `created_at` | DateTime | Not Null, UTC | Record creation timestamp |
 | `updated_at` | DateTime | Not Null, UTC | Last modification timestamp |
 
 ---
 
-## 3-Minute Technical Demo Flow
+## 8. UI Enhancements & Smart Features (B2B Sales Optimization)
 
-1. **Overview & Dashboard (0:00 - 0:45)**:
-   * Show dashboard metric tiles (Total, Hot, Warm, Cold).
-   * Demonstrate real-time searching by city ("Bengaluru") or keyword.
-   * Demonstrate 1-click priority filter tabs.
-2. **Add Lead & Instant AI Analysis (0:45 - 1:30)**:
-   * Click "Add New Lead", input a customer looking for a 3BHK in Gurgaon with immediate timeline.
-   * Save lead: Show instant assignment of **HOT** priority and explain the transparent scoring reason.
-   * Open Lead Details: Walk through the 6-part AI analysis grid (Summary, Intent, Requirements, Objections, Recommended Action, Suggested Response).
-3. **Conversational Co-Pilot (1:30 - 2:15)**:
-   * Click "Open AI Chat".
-   * Click the suggested prompt: *"What should I emphasize on the call?"*.
-   * Point out how the answer explicitly references the customer's budget and timeline rather than generic advice.
-4. **Follow-Up Generator (2:15 - 3:00)**:
-   * Click "Generate Follow-up".
-   * Toggle between **WhatsApp (Friendly)** and **Email (Assertive)**.
-   * Show how the format adjusts from concise chat with emojis to structured email with subject line.
-   * Click "Copy Text" and demonstrate instant clipboard ready feedback.
+To transform Masal AI from a simple CRUD tool into an indispensable daily driver for real estate salespeople, two critical workflow enhancements were integrated:
+
+### 8.1 Compact Pipeline Summary Strip
+* **The Problem**: Bulky stat cards dominated the top 40% of the viewport, pushing actionable leads below the fold.
+* **The Solution**: A compact horizontal pill strip (`All Leads` · `Hot Leads` · `Warm Leads` · `Cold Leads`) with real-time counters and 1-click active state filtering. Provides high scannability and minimal vertical footprint.
+
+### 8.2 AI Priority Queue ("Leads That Need Your Attention Next")
+* **Purpose**: Rather than forcing a salesperson to analyze dozens of cards, the AI Priority Queue dynamically surfaces the **top 3 most actionable leads**.
+* **Sorting Heuristic**:
+  1. **Scheduled Follow-ups**: Leads with upcoming or due `next_follow_up_at` dates are surfaced first.
+  2. **Priority Tier**: `HOT` leads rank above `WARM`, which rank above `COLD`.
+  3. **Timeline Urgency**: Inquiries with `"Immediate"` or `"1 month"` buying horizons rank above exploratory inquiries.
+* **Design**: Features an AI-accented banner, 1-line tactical next step, and 1-click buttons to `Open` lead details or jump straight into `Follow-up` generation.
+
+### 8.3 Lightweight Follow-up Scheduling & Contact Tracking
+* **The Problem**: Sales reps frequently lose track of when they last spoke to a buyer or forget to set next touchpoints.
+* **The Solution**:
+  * Added `last_contacted_at` and `next_follow_up_at` datetime tracking.
+  * **Safe Schema Migration**: Implemented `ensure_db_schema()` using `PRAGMA table_info(leads)` to safely execute `ALTER TABLE ADD COLUMN` on pre-existing SQLite databases without dropping tables or requiring Alembic.
+  * **Quick Scheduling Modal**: Presets for *"Today 5:00 PM"*, *"Tomorrow 11:00 AM"*, *"In 2 Days"*, or custom datetime picker.
+  * **1-Click Contact Logging**: Reps click *"Mark Contacted"* to instantly record today's touchpoint.
+  * **Visual Badges**: Scheduled dates appear directly on the lead cards and within the AI Priority Queue.
+
+---
+
+## 9. 3-Minute Technical Demo Flow
+
+1. **Dashboard & AI Priority Queue (0:00 - 0:45)**:
+   * Point out the **Compact Pipeline Strip** (`6 Total` · `2 Hot` · `2 Warm` · `2 Cold`).
+   * Highlight the **AI Priority Queue** surfacing the top 3 actionable leads with their immediate next steps.
+   * Demonstrate fast filtering by clicking the "Hot" pill or typing a locality like "Whitefield".
+2. **Lead Intake & Instant Prioritization (0:45 - 1:30)**:
+   * Click "Add Lead", input a customer with a 2-month timeline and ₹1.5 Cr budget in Whitefield.
+   * Save lead: Demonstrate deterministic rule-based priority evaluation (`WARM`) and instant Gemini intelligence extraction.
+   * Open Lead Details: Walk through the 6-part analysis grid (Intent, Requirements, Objections, Next Action, Suggested Response).
+3. **Smart Follow-up Scheduling (1:30 - 2:00)**:
+   * In Lead Details, click "Schedule Follow-up" and select *"Tomorrow 11:00 AM"*.
+   * Click "Mark Contacted" to record today's touchpoint.
+   * Return to Dashboard: Show how the scheduled reminder badge appears directly on the lead card and moves it into the AI Priority Queue!
+4. **Conversational Co-Pilot & Follow-Up Studio (2:00 - 3:00)**:
+   * Click "Chat" from the lead card: Ask *"What should I emphasize on the call?"* and demonstrate grounded reasoning.
+   * Click "Follow-up": Switch between **WhatsApp (Friendly)** and **Email (Assertive)**, showing prompt-engineered tone adaptation.
+   * Click "Copy Text" to demonstrate 1-click clipboard copying.
 
 ---
 

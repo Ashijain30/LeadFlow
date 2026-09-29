@@ -22,5 +22,7 @@ class Lead(Base):
     priority = Column(String(20), default="WARM", nullable=False)  # HOT, WARM, COLD
     priority_reason = Column(Text, nullable=True)
     ai_analysis = Column(JSON, nullable=True)
+    last_contacted_at = Column(DateTime(timezone=True), nullable=True)
+    next_follow_up_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
