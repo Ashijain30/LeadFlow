@@ -418,45 +418,34 @@ To transform Masal AI from a simple CRUD tool into an indispensable daily driver
 
 ---
 
-## 10. LeadFlow UI/UX Refinement (Minimal-Text & High-Scannability Architecture)
+## 10. Smart Follow-up Queue (Required Own Feature) & LeadFlow UI Redesign
 
-In the final engineering phase, the application's presentation layer was completely overhauled from an exploratory prototype into **LeadFlow** — a production-grade, minimal-text sales copilot designed for rapid cognitive processing by real estate representatives.
+### 10.1 The Smart Follow-up Queue
+Real estate transactions are lost when salespeople fail to follow up at the agreed time or lose track of customer touchpoints. The **Smart Follow-up Queue** solves this by transforming passive lead records into an active, actionable queue.
 
-### 10.1 Why the UI Was Simplified
-Sales representatives operate in high-tempo environments where cognitive overload delays response times. Early iterations suffered from "text-heavy card fatigue" — displaying paragraphs of customer quotes, multi-sentence AI reasoning, and redundant status tags. The redesign strips all non-essential visual noise, shifting the paradigm from *"Read $\rightarrow$ Understand $\rightarrow$ Decide"* to **"Scan $\rightarrow$ Act"**.
+* **Core Purpose**: Answers the single question a salesperson asks at 9:00 AM: *"Who do I need to contact next, when, and via what channel?"*
+* **How It Uses `last_contacted_at` & `next_follow_up_at`**:
+  * Calculates time-deltas against current system time to derive three dynamic status tiers:
+    1. **OVERDUE** (subtle red): Scheduled follow-up timestamp is in the past.
+    2. **TODAY** (subtle amber): Due within today's calendar window (e.g., `Today 2 PM`, `Today 4 PM`).
+    3. **TOMORROW** (subtle blue/slate): Scheduled for the next business day.
+* **Mark Follow-up Done Workflow**:
+  * Clicking `[Done]` immediately records a new touchpoint by setting `last_contacted_at = UTC NOW` via `PUT /api/leads/{id}/schedule`.
+  * The lead dynamically clears from the urgent queue and moves to the updated status without page reloads.
+  * Salespeople can open the lead card or click `[Open]` to schedule the subsequent touchpoint.
 
-### 10.2 Minimal-Text Design Principles
-1. **Short Action Directives**: Replaced multi-sentence AI recommendations with punchy 2–4 word action phrases (`Call within 2h`, `Schedule site visit`, `Send WhatsApp options`).
-2. **Elimination of Redundant Copy**: Removed decorative subtitles ("Inbound Leads Prioritized by..."), simplifying section headers to direct counts (`5 Leads`).
-3. **Structured Bullet Points**: Lead details organize customer intent into concise bullet points rather than dense prose.
-
-### 10.3 AI Priority Queue Design
-* Positioned immediately beneath the pipeline stat bar to isolate the **top 3 immediate action items**.
-* Compact card format answering only three questions: **Who?** (Name), **Priority & Budget?** (`HOT · City · Budget`), and **Next Step?** (`Next: Call within 2h`).
-* Direct navigation via `[Open]` and `[Follow-up]`.
-
-### 10.4 Compact Lead Cards (Strict 7-Point Hierarchy)
-1. **Name** (Bold, interactive)
-2. **Priority Badge** (`HOT`, `WARM`, `COLD`)
-3. **Location & Budget** (`Bengaluru · ₹85L–₹95L`)
-4. **Property Requirement** (`2 BHK`)
-5. **Short Next Action** (`Next: Follow up tomorrow`)
-6. **Actions** (`[View] [Chat] [Follow-up]`)
-
-### 10.5 Interactive States & Transitions
-* **Transitions**: Smooth 150ms `ease-out` transitions for hover and active states.
-* **Micro-interactions**: Subtle button compression (`scale(0.98)` on active) and gentle card elevation (`translateY(-2px)` with soft `0 2px 8px rgba(0,0,0,0.04)` shadow).
-* **Color Restraint**: Replaced excessive background gradients with clean white surfaces, subtle slate borders (`#E2E8F0`), and restrained priority tints (`#FEF2F2`, `#FFFBEB`, `#F1F5F9`).
-
-### 10.6 Responsive Behavior
-* **Desktop ($\ge 1024px$)**: 3-column AI Priority Queue, fluid multi-column lead grid.
-* **Tablet ($768px - 1023px$)**: 2-column lead cards with sticky search toolbar.
-* **Mobile ($< 768px$)**: Single-column vertical stack with horizontally scrollable filter toolbar and zero horizontal overflow.
-
-### 10.7 Branding Evolution
-* Main Product Name: **LeadFlow**
-* Tagline: **AI-powered real estate sales copilot**
-* Visible UI: 100% cleansed of academic/assignment branding for an authentic B2B SaaS feel.
+### 10.2 Minimal-Text Design & High-Scannability Architecture
+* **Strict 7-Point Lead Card Hierarchy**:
+  1. Customer Name (`Rahul Sharma`) & Priority Badge (`HOT`)
+  2. Location & Budget (`Bengaluru · ₹85L–₹95L`)
+  3. Property Requirement (`2 BHK · Whitefield`)
+  4. Short AI Summary (8–12 words generated via `getShortSummary()`, no scoring explanations)
+  5. Next Action (2–4 words: `Next: Call within 2h`)
+  6. Three Compact Actions: `[Open]` `[Chat]` `[Follow-up]`
+* **Zero Visual Clutter**:
+  * Replaced bulky AI priority containers and purple gradients with a clean `#F5F7FB` background, white cards, subtle `#E2E8F0` borders, and `#2563EB` primary accents.
+  * Pipeline overview converted from large cards into a single compact horizontal toolbar: `ALL 5  HOT 3  WARM 2  COLD 0`.
+  * Leads section header simplified to `LEADS · 5 leads` with a compact `Search leads...` input.
 
 ---
 

@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft,
+  MapPin,
+  Home,
+  IndianRupee,
+  Clock,
+  MessageSquare,
+  Sparkles,
   Bot,
   SendHorizontal,
+  CheckCircle2,
+  AlertTriangle,
+  Compass,
   Copy,
   Check,
   RefreshCw,
   Trash2,
+  Info,
   CalendarClock,
+  Calendar,
   X,
 } from 'lucide-react';
 import PriorityBadge from '../components/PriorityBadge';
@@ -33,8 +44,8 @@ export default function LeadDetails({
     return (
       <div className="lead-details-page">
         <div className="lead-not-found">
-          <p>Lead not found.</p>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
+          <p>Lead not found or has been removed.</p>
+          <button type="button" className="btn btn-secondary" onClick={onBack}>
             Back to Dashboard
           </button>
         </div>
@@ -54,6 +65,8 @@ export default function LeadDetails({
     customerMessage,
     customer_message,
     priority,
+    priorityReason,
+    priority_reason,
     aiAnalysis,
     ai_analysis,
     lastContactedAt,
@@ -65,17 +78,15 @@ export default function LeadDetails({
   const req = propertyRequirement || property_requirement;
   const timeline = buyingTimeline || buying_timeline;
   const msg = customerMessage || customer_message;
+  const reason = priorityReason || priority_reason;
   const analysis = aiAnalysis || ai_analysis;
   const lastContacted = lastContactedAt || last_contacted_at;
   const nextFollowUp = nextFollowUpAt || next_follow_up_at;
 
-  const rawKeyReqs = analysis?.key_requirements || analysis?.keyRequirements || [];
+  const keyReqs = analysis?.key_requirements || analysis?.keyRequirements || [];
   const objections = analysis?.objections || [];
   const nextAction = analysis?.recommended_next_action || analysis?.recommendedNextAction;
   const suggestedResp = analysis?.suggested_response || analysis?.suggestedResponse;
-
-  // Build bulleted requirements if AI list is sparse
-  const requirementsList = rawKeyReqs.length > 0 ? rawKeyReqs : [req, location, budget, timeline].filter(Boolean);
 
   const handleCopySuggestedResponse = () => {
     if (suggestedResp) {
@@ -110,8 +121,8 @@ export default function LeadDetails({
       await onScheduleFollowUp(id, {
         lastContactedAt: new Date().toISOString(),
       });
-      setScheduleSuccess('Contact recorded');
-      setTimeout(() => setScheduleSuccess(''), 2000);
+      setScheduleSuccess('Contact recorded for today.');
+      setTimeout(() => setScheduleSuccess(''), 2500);
     } catch (err) {
       console.error('Failed to update contact date:', err);
     } finally {
@@ -151,8 +162,8 @@ export default function LeadDetails({
         nextFollowUpAt: targetIso,
       });
       setShowScheduleModal(false);
-      setScheduleSuccess(targetIso ? 'Follow-up scheduled' : 'Follow-up cleared');
-      setTimeout(() => setScheduleSuccess(''), 2000);
+      setScheduleSuccess(targetIso ? 'Follow-up scheduled!' : 'Follow-up cleared.');
+      setTimeout(() => setScheduleSuccess(''), 2500);
     } catch (err) {
       console.error('Failed to schedule follow-up:', err);
     } finally {
@@ -162,246 +173,233 @@ export default function LeadDetails({
 
   return (
     <div className="lead-details-page">
-      {/* Top Navigation & Actions Bar */}
-      <div className="details-nav-row">
-        <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
-          <ArrowLeft size={14} />
-          <span>Dashboard</span>
-        </button>
-
-        <div className="details-action-buttons">
-          {onReanalyzeLead && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={handleReanalyzeClick}
-              disabled={isReanalyzing}
-              title="Re-analyze with AI"
-            >
-              <RefreshCw size={13} className={isReanalyzing ? 'spin-icon text-ai' : 'text-ai'} />
-              <span>{isReanalyzing ? 'Analyzing...' : 'Re-Analyze'}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => onOpenChat(id)}
-          >
-            <Bot size={14} className="text-ai" />
-            <span>Chat</span>
+      {/* Top Navigation & Lead Header */}
+      <div className="details-header-card">
+        <div className="details-nav-row">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
+            <ArrowLeft size={16} />
+            <span>Back to Dashboard</span>
           </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => onOpenFollowUp(id)}
-          >
-            <SendHorizontal size={14} />
-            <span>Follow-up</span>
-          </button>
-          {onDeleteLead && (
+          <div className="details-action-buttons">
+            {onReanalyzeLead && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleReanalyzeClick}
+                disabled={isReanalyzing}
+                title="Trigger fresh Gemini analysis"
+              >
+                <RefreshCw size={15} className={isReanalyzing ? 'spin-icon text-ai' : 'text-ai'} />
+                <span>{isReanalyzing ? 'Analyzing with AI...' : 'Re-Analyze'}</span>
+              </button>
+            )}
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-danger-hover"
-              onClick={() => setShowDeleteConfirm(true)}
-              title="Delete lead"
+              className="btn btn-secondary"
+              onClick={() => onOpenChat(id)}
             >
-              <Trash2 size={14} className="text-danger" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && (
-        <div className="delete-confirm-banner">
-          <span>Delete <strong>{name}</strong> permanently?</span>
-          <div className="delete-confirm-actions">
-            <button
-              type="button"
-              className="btn btn-secondary btn-xs"
-              onClick={() => setShowDeleteConfirm(false)}
-            >
-              Cancel
+              <Bot size={16} className="text-ai" />
+              <span>Open AI Chat</span>
             </button>
             <button
               type="button"
-              className="btn btn-danger btn-xs"
-              onClick={handleDeleteConfirm}
+              className="btn btn-primary"
+              onClick={() => onOpenFollowUp(id)}
             >
-              Delete
+              <SendHorizontal size={16} />
+              <span>Generate Follow-up</span>
             </button>
+            {onDeleteLead && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-danger-hover"
+                onClick={() => setShowDeleteConfirm(true)}
+                title="Delete this lead permanently"
+              >
+                <Trash2 size={16} className="text-danger" />
+              </button>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Lead Profile Header */}
-      <div className="details-card lead-profile-card">
-        <div className="details-title-row">
-          <div className="details-customer-identity">
-            <h1 className="details-lead-name">{name}</h1>
-            <span className="details-meta-line">
-              {location} · {budget} · {req}
-            </span>
-          </div>
-          <PriorityBadge priority={priority} size="md" />
-        </div>
-
-        {/* Inbound Message */}
-        {msg && (
-          <div className="details-inbound-quote">
-            "{msg}"
+        {/* Delete Confirmation Banner */}
+        {showDeleteConfirm && (
+          <div className="delete-confirm-banner">
+            <div className="delete-confirm-text">
+              <strong>Delete {name}?</strong> This will permanently remove this lead and its analysis from the database.
+            </div>
+            <div className="delete-confirm-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={handleDeleteConfirm}
+              >
+                Yes, Delete Permanently
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Compact Follow-up & Contact Status */}
+        <div className="details-title-row">
+          <div className="details-customer-identity">
+            <h1 className="details-lead-name">{name}</h1>
+            <span className="details-lead-location">
+              <MapPin size={16} className="text-muted" />
+              {location}
+            </span>
+          </div>
+          <div className="details-priority-area">
+            <PriorityBadge priority={priority} size="lg" />
+          </div>
+        </div>
+
+        {reason && (
+          <div className="priority-reason-banner">
+            <Info size={14} className="reason-banner-icon" />
+            <span><strong>Priority Rationale:</strong> {reason}</span>
+          </div>
+        )}
+
+        {/* Lead Quick Facts Grid */}
+        <div className="lead-facts-grid">
+          <div className="fact-item">
+            <div className="fact-label">
+              <Home size={14} className="fact-icon text-primary" />
+              Property Requirement
+            </div>
+            <div className="fact-value">{req}</div>
+          </div>
+
+          <div className="fact-item">
+            <div className="fact-label">
+              <IndianRupee size={14} className="fact-icon text-success" />
+              Budget Range
+            </div>
+            <div className="fact-value">{budget}</div>
+          </div>
+
+          <div className="fact-item">
+            <div className="fact-label">
+              <Clock size={14} className="fact-icon text-warning" />
+              Buying Timeline
+            </div>
+            <div className="fact-value">{timeline}</div>
+          </div>
+        </div>
+
+        {/* Follow-up & Contact Tracking Bar */}
         <div className="lead-tracking-bar">
           <div className="tracking-item">
-            <span className="tracking-title">Next Follow-up</span>
-            <span className="tracking-val">
+            <div className="tracking-meta">
+              <CalendarClock size={15} className="tracking-icon text-ai" />
+              <span className="tracking-title">Next Scheduled Follow-up</span>
+            </div>
+            <div className="tracking-value">
               {nextFollowUp ? (
-                new Date(nextFollowUp).toLocaleDateString([], {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
+                <span className="scheduled-tag">
+                  {new Date(nextFollowUp).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
               ) : (
-                'None scheduled'
+                <span className="text-muted">None scheduled</span>
               )}
-            </span>
+            </div>
           </div>
 
           <div className="tracking-item">
-            <span className="tracking-title">Last Contacted</span>
-            <span className="tracking-val">
+            <div className="tracking-meta">
+              <Clock size={15} className="tracking-icon text-muted" />
+              <span className="tracking-title">Last Contacted</span>
+            </div>
+            <div className="tracking-value">
               {lastContacted ? (
-                new Date(lastContacted).toLocaleDateString([], {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
+                <span className="contacted-tag">
+                  {new Date(lastContacted).toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
               ) : (
-                'Not yet'
+                <span className="text-muted">Not contacted yet</span>
               )}
-            </span>
+            </div>
           </div>
 
           <div className="tracking-actions">
             <button
               type="button"
-              className="btn btn-secondary btn-xs"
+              className="btn btn-secondary btn-sm"
               onClick={handleMarkContactedToday}
               disabled={isScheduling}
+              title="Record contact attempt today"
             >
-              Mark Contacted
+              <Check size={14} />
+              <span>Mark Contacted</span>
             </button>
             <button
               type="button"
-              className="btn btn-outline btn-xs"
+              className="btn btn-outline btn-sm"
               onClick={() => setShowScheduleModal(true)}
               disabled={isScheduling}
             >
-              <CalendarClock size={12} />
-              <span>{nextFollowUp ? 'Reschedule' : 'Schedule'}</span>
+              <CalendarClock size={14} />
+              <span>{nextFollowUp ? 'Reschedule' : 'Schedule Follow-up'}</span>
             </button>
           </div>
         </div>
 
+        {/* Schedule Success Alert */}
         {scheduleSuccess && (
-          <div className="schedule-toast">
-            <Check size={12} className="text-success" />
+          <div className="schedule-success-toast">
+            <Check size={14} className="text-success" />
             <span>{scheduleSuccess}</span>
           </div>
         )}
-      </div>
 
-      {/* Structured Sections (Lead, AI Summary, Requirements, Concerns, Next Action, Suggested Reply) */}
-      <div className="details-sections-grid">
-        {/* AI Summary */}
-        <div className="details-card">
-          <h3 className="section-label">AI Summary</h3>
-          <p className="section-body">
-            {analysis?.summary || 'Analysis pending.'}
-          </p>
-        </div>
-
-        {/* Requirements (Short Bullets) */}
-        <div className="details-card">
-          <h3 className="section-label">Requirements</h3>
-          <ul className="bullet-list">
-            {requirementsList.map((item, idx) => (
-              <li key={idx}>• {item}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Concerns (Short Bullets) */}
-        <div className="details-card">
-          <h3 className="section-label">Concerns</h3>
-          <ul className="bullet-list">
-            {objections.length > 0 ? (
-              objections.map((item, idx) => (
-                <li key={idx}>• {item}</li>
-              ))
-            ) : (
-              <li className="text-muted">No major objections identified.</li>
-            )}
-          </ul>
-        </div>
-
-        {/* Next Action */}
-        <div className="details-card highlight-card">
-          <h3 className="section-label">Next Action</h3>
-          <p className="action-highlight-text">
-            {nextAction || 'Contact customer to review details.'}
-          </p>
-        </div>
-
-        {/* Suggested Reply */}
-        <div className="details-card reply-card">
-          <div className="card-header-flex">
-            <h3 className="section-label">Suggested Reply</h3>
-            {suggestedResp && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-xs"
-                onClick={handleCopySuggestedResponse}
-              >
-                {copiedResponse ? (
-                  <>
-                    <Check size={12} className="text-success" />
-                    <span className="text-success">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy size={12} />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            )}
+        {/* Customer Inbound Message Box */}
+        <div className="inbound-message-box">
+          <div className="inbound-message-header">
+            <MessageSquare size={16} className="text-muted" />
+            <span>Customer Inbound Message</span>
           </div>
-          <div className="suggested-quote-box">
-            "{suggestedResp || 'No response drafted yet.'}"
-          </div>
+          <blockquote className="inbound-quote">"{msg}"</blockquote>
         </div>
       </div>
 
-      {/* Quick Schedule Modal */}
+      {/* Schedule Follow-up Modal */}
       {showScheduleModal && (
         <div className="modal-backdrop" onClick={() => setShowScheduleModal(false)}>
           <div className="schedule-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">Schedule Follow-up</h3>
+              <div className="modal-title-group">
+                <CalendarClock size={18} className="text-ai" />
+                <h3 className="modal-title">Schedule Follow-up for {name}</h3>
+              </div>
               <button
                 type="button"
                 className="close-modal-btn"
                 onClick={() => setShowScheduleModal(false)}
               >
-                <X size={15} />
+                <X size={16} />
               </button>
             </div>
+
+            <p className="modal-description">
+              Choose a quick preset or pick a specific date and time to keep this lead on track.
+            </p>
 
             <div className="preset-buttons-grid">
               <button
@@ -435,7 +433,7 @@ export default function LeadDetails({
 
             <div className="custom-schedule-box">
               <label htmlFor="custom-datetime" className="custom-schedule-label">
-                Custom time:
+                Or select custom date & time:
               </label>
               <div className="custom-datetime-row">
                 <input
@@ -447,7 +445,7 @@ export default function LeadDetails({
                 />
                 <button
                   type="button"
-                  className="btn btn-primary btn-xs"
+                  className="btn btn-primary btn-sm"
                   onClick={() => handleApplySchedule('custom')}
                   disabled={!customDateTime || isScheduling}
                 >
@@ -460,7 +458,7 @@ export default function LeadDetails({
               {nextFollowUp && (
                 <button
                   type="button"
-                  className="btn btn-secondary btn-xs text-danger"
+                  className="btn btn-secondary btn-sm text-danger"
                   onClick={() => handleApplySchedule('clear')}
                   disabled={isScheduling}
                 >
@@ -469,7 +467,7 @@ export default function LeadDetails({
               )}
               <button
                 type="button"
-                className="btn btn-secondary btn-xs"
+                className="btn btn-secondary btn-sm"
                 onClick={() => setShowScheduleModal(false)}
               >
                 Cancel
@@ -478,6 +476,127 @@ export default function LeadDetails({
           </div>
         </div>
       )}
+
+      {/* AI Lead Analysis Section */}
+      <div className="ai-analysis-container">
+        <div className="ai-section-title-bar">
+          <div className="ai-title-left">
+            <div className="ai-sparkle-pill">
+              <Sparkles size={16} className="text-ai" />
+            </div>
+            <div>
+              <h2 className="ai-main-title">AI Lead Analysis & Strategic Intelligence</h2>
+              <p className="ai-main-subtitle">
+                Contextual insights extracted from customer message, timeline, and requirements
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="ai-grid">
+          {/* 1. Lead Summary */}
+          <div className="ai-card ai-card-highlight">
+            <div className="ai-card-header">
+              <span className="ai-badge-num">1</span>
+              <h3 className="ai-card-title">Executive Summary</h3>
+            </div>
+            <p className="ai-card-text">{analysis?.summary || 'Analysis pending.'}</p>
+          </div>
+
+          {/* 2. Customer Intent */}
+          <div className="ai-card">
+            <div className="ai-card-header">
+              <span className="ai-badge-num">2</span>
+              <h3 className="ai-card-title">Customer Intent</h3>
+            </div>
+            <div className="intent-box">
+              <Compass size={16} className="intent-icon" />
+              <p className="intent-text">{analysis?.intent || 'Not specified'}</p>
+            </div>
+          </div>
+
+          {/* 3. Key Requirements */}
+          <div className="ai-card">
+            <div className="ai-card-header">
+              <span className="ai-badge-num">3</span>
+              <h3 className="ai-card-title">Key Requirements</h3>
+            </div>
+            <ul className="requirements-list">
+              {keyReqs.length > 0 ? (
+                keyReqs.map((item, idx) => (
+                  <li key={idx} className="requirement-item">
+                    <CheckCircle2 size={16} className="req-icon text-success" />
+                    <span>{item}</span>
+                  </li>
+                ))
+              ) : (
+                <li>No requirements identified.</li>
+              )}
+            </ul>
+          </div>
+
+          {/* 4. Objections & Concerns */}
+          <div className="ai-card">
+            <div className="ai-card-header">
+              <span className="ai-badge-num">4</span>
+              <h3 className="ai-card-title">Objections & Concerns</h3>
+            </div>
+            <ul className="objections-list">
+              {objections.length > 0 ? (
+                objections.map((obj, idx) => (
+                  <li key={idx} className="objection-item">
+                    <AlertTriangle size={16} className="obj-icon text-warning" />
+                    <span>{obj}</span>
+                  </li>
+                ))
+              ) : (
+                <li>No objections identified.</li>
+              )}
+            </ul>
+          </div>
+
+          {/* 5. Recommended Next Action */}
+          <div className="ai-card ai-card-action">
+            <div className="ai-card-header">
+              <span className="ai-badge-num">5</span>
+              <h3 className="ai-card-title">Recommended Next Action</h3>
+            </div>
+            <div className="recommended-action-box">
+              <p className="action-text">{nextAction || 'Contact customer to review details.'}</p>
+            </div>
+          </div>
+
+          {/* 6. Suggested Response */}
+          <div className="ai-card ai-card-response">
+            <div className="ai-card-header">
+              <span className="ai-badge-num">6</span>
+              <h3 className="ai-card-title">Suggested First Response</h3>
+              {suggestedResp && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm copy-btn"
+                  onClick={handleCopySuggestedResponse}
+                >
+                  {copiedResponse ? (
+                    <>
+                      <Check size={14} className="text-success" />
+                      <span className="text-success">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} />
+                      <span>Copy Response</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <blockquote className="suggested-response-quote">
+              "{suggestedResp || 'No response drafted yet.'}"
+            </blockquote>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

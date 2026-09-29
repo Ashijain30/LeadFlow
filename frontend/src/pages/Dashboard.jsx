@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, RotateCw } from 'lucide-react';
 import SummaryCards from '../components/SummaryCards';
-import PriorityQueue from '../components/PriorityQueue';
+import SmartFollowUps from '../components/SmartFollowUps';
 import LeadCard from '../components/LeadCard';
 import EmptyState from '../components/EmptyState';
 
@@ -13,6 +13,7 @@ export default function Dashboard({
   onOpenFollowUp,
   onAddLead,
   onRefresh,
+  onMarkDone,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
@@ -59,64 +60,78 @@ export default function Dashboard({
 
   return (
     <div className="dashboard-page">
-      {/* 1. Compact Horizontal Pipeline Stat/Filter Bar */}
+      {/* 1. Pipeline Summary Bar */}
       <SummaryCards
         counts={counts}
         activeFilter={priorityFilter}
         onSelectFilter={setPriorityFilter}
       />
 
-      {/* 2. AI Priority Queue */}
-      <PriorityQueue
+      {/* 2. Smart Follow-ups (Required Own Feature) */}
+      <SmartFollowUps
         leads={leads}
         onViewDetails={onViewDetails}
-        onOpenFollowUp={onOpenFollowUp}
+        onMarkDone={onMarkDone}
       />
 
-      {/* 3. Compact Search & Refresh Toolbar */}
-      <div className="search-toolbar">
-        <div className="search-input-wrapper">
-          <Search size={15} className="search-icon" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search leads..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
+      {/* 3. Leads Section Header & Compact Toolbar */}
+      <div className="leads-section">
+        <div className="leads-section-header">
+          <div className="leads-title-row">
+            <span className="leads-main-title">LEADS</span>
+            <span className="leads-count-tag">{filteredLeads.length} leads</span>
+          </div>
+        </div>
+
+        {/* Compact Search & Filter Toolbar */}
+        <div className="search-filter-toolbar">
+          <div className="search-input-wrapper">
+            <Search size={14} className="search-icon" />
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search leads..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="clear-search-btn"
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          <div className="filter-pill-group">
+            {['ALL', 'HOT', 'WARM', 'COLD'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`filter-tab-pill ${priorityFilter === tab ? 'is-active' : ''}`}
+                onClick={() => setPriorityFilter(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {onRefresh && (
             <button
               type="button"
-              className="clear-search-btn"
-              onClick={() => setSearchQuery('')}
-              title="Clear search"
+              className="btn btn-secondary btn-xs refresh-btn"
+              onClick={onRefresh}
+              title="Refresh leads"
             >
-              ×
+              <RotateCw size={13} className={isLoading ? 'spin-icon' : ''} />
             </button>
           )}
         </div>
 
-        {onRefresh && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm refresh-btn"
-            onClick={onRefresh}
-            title="Refresh leads"
-          >
-            <RotateCw size={13} className={isLoading ? 'spin-icon' : ''} />
-            <span>Refresh</span>
-          </button>
-        )}
-      </div>
-
-      {/* 4. Leads Grid */}
-      <div className="leads-section">
-        <div className="leads-section-header">
-          <h2 className="section-title">
-            {filteredLeads.length} Leads
-          </h2>
-        </div>
-
+        {/* 4. Leads Grid (3-column on desktop) */}
         {isLoading && leads.length === 0 ? (
           <div className="loading-state-card">
             <div className="spinner"></div>
@@ -138,8 +153,8 @@ export default function Dashboard({
           <EmptyState
             message={
               searchQuery || priorityFilter !== 'ALL'
-                ? `No leads match your filter.`
-                : 'No leads available yet.'
+                ? 'No leads match your filter.'
+                : 'No leads available.'
             }
             onReset={handleResetFilters}
             onAddLead={onAddLead}

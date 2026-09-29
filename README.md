@@ -1,4 +1,4 @@
-# LeadFlow — AI-Powered Real Estate Sales Copilot
+# Masal AI — Real Estate Lead Prioritization & Assistant
 
 An intelligent, full-stack AI application designed to help real-estate sales representatives understand, prioritize, and act on inbound property leads.
 
@@ -8,7 +8,7 @@ An intelligent, full-stack AI application designed to help real-estate sales rep
 
 Real estate sales professionals receive dozens of unstructured inquiries across WhatsApp, property portals (99acres, MagicBricks), and landing pages. Many leads are window-shoppers, while high-intent buyers slip through the cracks due to delayed follow-ups.
 
-**LeadFlow** solves this by:
+**Masal AI** solves this by:
 1. **Capturing inbound leads** with structured criteria (Budget, Timeline, Locality, Specifications, Raw Customer Message).
 2. **Generating AI sales intelligence** using Google Gemini (Structured Executive Summary, Buying Intent, Key Requirements, Objections/Concerns, Tactical Next Action, and Suggested Response).
 3. **Transparent Lead Prioritization** (`HOT`, `WARM`, `COLD`) using an explainable, multi-factor scoring mechanism based on purchase urgency, budget specificity, and engagement signals.

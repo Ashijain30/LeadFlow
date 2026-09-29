@@ -12,7 +12,7 @@ export default function Header({ currentView, onNavigate }) {
           tabIndex={0}
         >
           <div className="brand-icon-wrapper">
-            <Building2 className="brand-icon" size={20} />
+            <Building2 className="brand-icon" size={18} />
           </div>
           <div className="brand-text">
             <span className="brand-title">LeadFlow</span>
@@ -28,7 +28,7 @@ export default function Header({ currentView, onNavigate }) {
               onClick={() => onNavigate('dashboard')}
             >
               <ArrowLeft size={14} />
-              <span>Dashboard</span>
+              <span>Back</span>
             </button>
           ) : (
             <button
@@ -36,7 +36,7 @@ export default function Header({ currentView, onNavigate }) {
               className="btn btn-primary btn-sm"
               onClick={() => onNavigate('add-lead')}
             >
-              <Plus size={15} />
+              <Plus size={14} />
               <span>Add Lead</span>
             </button>
           )}

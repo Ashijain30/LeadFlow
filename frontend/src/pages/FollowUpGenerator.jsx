@@ -38,7 +38,7 @@ export default function FollowUpGenerator({ lead, onBack }) {
 
     if (selectedChannel === 'Email') {
       if (selectedTone === 'Friendly') {
-        return `Subject: Great options for your ${req} in ${loc}! 🏡\n\nHi ${name},\n\nHope you are having a wonderful day!\n\nI came across your inquiry regarding a ${req} in ${loc}. We have a couple of verified properties that fall right inside your ${budget} budget.\n\nI’ve attached the digital brochures with photos and floor plans. Whenever you have a free moment, take a look and let me know your thoughts!\n\nWarm regards,\nLeadFlow Realty Team`;
+        return `Subject: Great options for your ${req} in ${loc}! 🏡\n\nHi ${name},\n\nHope you are having a wonderful day!\n\nI came across your inquiry regarding a ${req} in ${loc}. We have a couple of verified properties that fall right inside your ${budget} budget.\n\nI’ve attached the digital brochures with photos and floor plans. Whenever you have a free moment, take a look and let me know your thoughts!\n\nWarm regards,\nLeadFlow Advisory Team`;
       }
       if (selectedTone === 'Assertive') {
         return `Subject: Shortlisted Properties: ${req} in ${loc} [Action Required]\n\nDear ${name},\n\nThank you for your inquiry. Properties matching ${req} in prime ${loc} within the ${budget} bracket have limited inventory.\n\nTo ensure you don’t miss out on units aligned with your "${timeline}" timeline, I recommend scheduling a 15-minute consultation to review RERA documents and lock in pricing.\n\nPlease confirm whether tomorrow at 11:00 AM or 3:00 PM works for your calendar.\n\nSincerely,\nLeadFlow Advisory`;
@@ -142,7 +142,7 @@ export default function FollowUpGenerator({ lead, onBack }) {
           onClick={handleGenerate}
           disabled={isGenerating}
         >
-          <Sparkles size={14} className={isGenerating ? 'spin-icon' : ''} />
+          <Sparkles size={13} className={isGenerating ? 'spin-icon' : ''} />
           <span>{isGenerating ? 'Generating...' : 'Generate'}</span>
         </button>
       </div>

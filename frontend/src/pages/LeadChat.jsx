@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Bot, User } from 'lucide-react';
+import { ArrowLeft, Send, Bot, User, Sparkles } from 'lucide-react';
+import PriorityBadge from '../components/PriorityBadge';
 import { chatWithLead } from '../services/api';
 
 export default function LeadChat({ lead, onBack }) {
@@ -12,7 +13,7 @@ export default function LeadChat({ lead, onBack }) {
     {
       id: 1,
       sender: 'assistant',
-      text: `Hello! I'm your AI Copilot for ${lead?.name || 'this lead'}. Ask me how to frame your call, handle objections, or craft your reply.`,
+      text: `Hello! I am your AI sales assistant for ${lead?.name || 'this customer'}. I have reviewed their inquiry for ${req} in ${loc} with budget ${budget} and timeline "${timeline}". How can I help you prepare or close this lead?`,
       timestamp: 'Just now',
     },
   ]);
@@ -32,19 +33,18 @@ export default function LeadChat({ lead, onBack }) {
     return (
       <div className="lead-chat-page">
         <p>Lead not found.</p>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
-          Dashboard
+        <button type="button" className="btn btn-secondary" onClick={onBack}>
+          Back to Dashboard
         </button>
       </div>
     );
   }
 
-  // User-specified quick prompt pills
   const suggestedPrompts = [
-    'What should I say?',
-    'Make it assertive',
-    'Summarize lead',
-    'Handle objection',
+    'What should I emphasize on the call?',
+    "What are this customer's main concerns?",
+    'Make my reply more assertive.',
+    'What should I do next?',
   ];
 
   const handleSendMessage = async (textToSend) => {
@@ -63,39 +63,34 @@ export default function LeadChat({ lead, onBack }) {
     setIsTyping(true);
 
     try {
-      const response = await chatWithLead(lead.id, text.trim());
+      // Call real backend API
+      const historyPayload = messages.map((m) => ({
+        sender: m.sender,
+        text: m.text,
+      }));
+      const res = await chatWithLead(lead.id, text.trim(), historyPayload);
+      const replyText = res.response || res.text;
+
       const assistantMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        text: response.reply || response.text || response.message,
+        text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       console.warn('Real AI chat endpoint error, using contextual fallback:', err);
-      // Contextual fallback response
-      let fallbackText = `For ${lead.name} (${req}, ${loc}, ${budget}): `;
-      if (text.toLowerCase().includes('assertive')) {
-        fallbackText += `Emphasize that inventory in this price bracket moves quickly. Propose two specific time slots today for a site visit rather than asking open-ended questions.`;
-      } else if (text.toLowerCase().includes('say') || text.toLowerCase().includes('emphasize')) {
-        fallbackText += `Focus on their ${timeline} timeline and highlight that your options match their ${budget} range with verified amenities.`;
-      } else if (text.toLowerCase().includes('summarize')) {
-        fallbackText += `${lead.name} is seeking ${req} in ${loc} within ${budget} on a "${timeline}" timeline.`;
-      } else if (text.toLowerCase().includes('objection')) {
-        fallbackText += `Address price certainty upfront by sharing comparable registry rates in ${loc}.`;
-      } else {
-        fallbackText += `Recommend booking an in-person site visit this week to lock in current pricing.`;
-      }
+      // Fallback lead-grounded response
+      const fallbackReply = `For ${lead.name} (${req} in ${loc}, budget ${budget}):
+Focus on locking in an inspection slot this weekend. Overcome their concerns around pricing clarity and confirmed RERA delivery timelines before negotiating discounts.`;
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'assistant',
-          text: fallbackText,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      const assistantMessage = {
+        id: Date.now() + 1,
+        sender: 'assistant',
+        text: fallbackReply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
     } finally {
       setIsTyping(false);
     }
@@ -103,34 +98,45 @@ export default function LeadChat({ lead, onBack }) {
 
   return (
     <div className="lead-chat-page">
-      {/* Header */}
+      {/* Top Banner with Lead Context */}
       <div className="chat-header-bar">
         <button type="button" className="btn btn-secondary btn-sm" onClick={onBack}>
-          <ArrowLeft size={14} />
-          <span>Back</span>
+          <ArrowLeft size={16} />
+          <span>Back to Lead</span>
         </button>
+
         <div className="chat-lead-info">
-          <h2 className="chat-title">AI Copilot</h2>
-          <span className="chat-lead-name">· {lead.name}</span>
+          <div className="chat-lead-title-row">
+            <span className="chat-lead-title">AI Sales Assistant for {lead.name}</span>
+            <PriorityBadge priority={lead.priority} size="sm" />
+          </div>
+          <span className="chat-lead-meta">
+            {req} • {loc} • Budget: {budget} • Timeline: {timeline}
+          </span>
         </div>
       </div>
 
-      {/* Suggested Quick Prompt Pills */}
-      <div className="chat-prompt-pills">
-        {suggestedPrompts.map((prompt, idx) => (
-          <button
-            key={idx}
-            type="button"
-            className="prompt-pill"
-            onClick={() => handleSendMessage(prompt)}
-            disabled={isTyping}
-          >
-            {prompt}
-          </button>
-        ))}
+      {/* Suggested Prompts Carousel */}
+      <div className="chat-suggestions-bar">
+        <div className="suggestions-label">
+          <Sparkles size={14} className="text-ai" />
+          <span>Quick Prompts:</span>
+        </div>
+        <div className="suggestions-scroll">
+          {suggestedPrompts.map((prompt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="suggestion-chip"
+              onClick={() => handleSendMessage(prompt)}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Message Stream */}
+      {/* Messages Stream */}
       <div className="chat-messages-container">
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
@@ -140,11 +146,16 @@ export default function LeadChat({ lead, onBack }) {
               className={`chat-message-row ${isUser ? 'is-user' : 'is-assistant'}`}
             >
               <div className="message-avatar">
-                {isUser ? <User size={14} /> : <Bot size={14} />}
+                {isUser ? <User size={16} /> : <Bot size={16} />}
               </div>
-              <div className="message-bubble">
-                <p className="message-text">{msg.text}</p>
-                <span className="message-time">{msg.timestamp}</span>
+              <div className="message-bubble-wrapper">
+                <div className="message-sender-name">
+                  {isUser ? 'You (Sales Rep)' : `AI Assistant (${lead.name})`}
+                </div>
+                <div className="message-bubble">
+                  <p className="message-content">{msg.text}</p>
+                </div>
+                <div className="message-timestamp">{msg.timestamp}</div>
               </div>
             </div>
           );
@@ -153,42 +164,50 @@ export default function LeadChat({ lead, onBack }) {
         {isTyping && (
           <div className="chat-message-row is-assistant">
             <div className="message-avatar">
-              <Bot size={14} />
+              <Bot size={16} />
             </div>
-            <div className="message-bubble typing-bubble">
-              <span className="typing-dot"></span>
-              <span className="typing-dot"></span>
-              <span className="typing-dot"></span>
+            <div className="message-bubble-wrapper">
+              <div className="message-bubble typing-bubble">
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+              </div>
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Form */}
-      <form
-        className="chat-input-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSendMessage();
-        }}
-      >
-        <input
-          type="text"
-          className="chat-input"
-          placeholder={`Ask AI about ${lead.name}...`}
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          disabled={isTyping}
-        />
-        <button
-          type="submit"
-          className="btn btn-primary btn-sm chat-send-btn"
-          disabled={!inputText.trim() || isTyping}
+      <div className="chat-input-area">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendMessage();
+          }}
+          className="chat-form"
         >
-          <Send size={14} />
-        </button>
-      </form>
+          <input
+            type="text"
+            className="chat-input"
+            placeholder={`Ask a question or coaching prompt regarding ${lead.name}...`}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="btn btn-primary chat-send-btn"
+            disabled={!inputText.trim() || isTyping}
+          >
+            <span>Send</span>
+            <Send size={15} />
+          </button>
+        </form>
+        <span className="chat-footer-hint">
+          Enter sends your question. AI uses this specific lead's stored requirements, budget, and context.
+        </span>
+      </div>
     </div>
   );
 }

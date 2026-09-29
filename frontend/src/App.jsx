@@ -134,6 +134,12 @@ export default function App() {
     }
   };
 
+  const handleMarkFollowUpDone = async (id) => {
+    return handleScheduleFollowUp(id, {
+      lastContactedAt: new Date().toISOString(),
+    });
+  };
+
   const handleBackToLead = () => {
     if (selectedLeadId) {
       handleNavigate('lead-details');
@@ -165,6 +171,7 @@ export default function App() {
             onOpenFollowUp={handleOpenFollowUp}
             onAddLead={() => handleNavigate('add-lead')}
             onRefresh={() => refreshLeads()}
+            onMarkDone={handleMarkFollowUpDone}
           />
         )}
 

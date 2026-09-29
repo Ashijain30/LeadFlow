@@ -1,30 +1,31 @@
 import React from 'react';
 
 /**
- * Ultra-compact horizontal stat/filter bar: All 5 · Hot 3 · Warm 2 · Cold 0
+ * Compact horizontal pipeline filter bar:
+ * ALL 5   HOT 3   WARM 2   COLD 0
  */
 export default function SummaryCards({ counts, activeFilter, onSelectFilter }) {
   const items = [
-    { id: 'ALL', label: 'All', count: counts.total, type: 'all' },
-    { id: 'HOT', label: 'Hot', count: counts.hot, type: 'hot' },
-    { id: 'WARM', label: 'Warm', count: counts.warm, type: 'warm' },
-    { id: 'COLD', label: 'Cold', count: counts.cold, type: 'cold' },
+    { id: 'ALL', label: 'ALL', count: counts.total },
+    { id: 'HOT', label: 'HOT', count: counts.hot },
+    { id: 'WARM', label: 'WARM', count: counts.warm },
+    { id: 'COLD', label: 'COLD', count: counts.cold },
   ];
 
   return (
-    <div className="pipeline-stat-bar" role="toolbar" aria-label="Pipeline filter bar">
-      {items.map(({ id, label, count, type }) => {
+    <div className="pipeline-bar" role="toolbar" aria-label="Pipeline filter bar">
+      {items.map(({ id, label, count }) => {
         const isActive = activeFilter === id;
         return (
           <button
             key={id}
             type="button"
-            className={`stat-pill stat-${type} ${isActive ? 'is-active' : ''}`}
+            className={`pipeline-pill ${isActive ? 'is-active' : ''}`}
             onClick={() => onSelectFilter(id)}
             aria-pressed={isActive}
           >
-            <span className="stat-label">{label}</span>
-            <span className="stat-count">{count}</span>
+            <span className="pipeline-pill-label">{label}</span>
+            <span className="pipeline-pill-count">{count}</span>
           </button>
         );
       })}
