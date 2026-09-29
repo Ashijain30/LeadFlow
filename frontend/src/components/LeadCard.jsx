@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Home, IndianRupee, Clock, MessageSquare, Sparkles, ArrowRight } from 'lucide-react';
+import { MapPin, Home, IndianRupee, Clock, MessageSquare, Sparkles, ArrowRight, Info } from 'lucide-react';
 import PriorityBadge from './PriorityBadge';
 
 export default function LeadCard({ lead, onViewDetails }) {
@@ -12,8 +12,12 @@ export default function LeadCard({ lead, onViewDetails }) {
     buyingTimeline,
     customerMessage,
     priority,
+    priorityReason,
+    priority_reason,
     aiAnalysis,
   } = lead;
+
+  const reason = priorityReason || priority_reason;
 
   return (
     <div className="lead-card">
@@ -27,6 +31,13 @@ export default function LeadCard({ lead, onViewDetails }) {
         </div>
         <PriorityBadge priority={priority} />
       </div>
+
+      {reason && (
+        <div className="priority-reason-pill">
+          <Info size={12} className="reason-icon" />
+          <span>{reason}</span>
+        </div>
+      )}
 
       <div className="lead-property-info">
         <div className="lead-info-row">

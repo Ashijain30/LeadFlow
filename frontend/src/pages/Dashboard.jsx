@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, Plus } from 'lucide-react';
+import { Search, SlidersHorizontal, Plus, RotateCw } from 'lucide-react';
 import SummaryCards from '../components/SummaryCards';
 import LeadCard from '../components/LeadCard';
 import EmptyState from '../components/EmptyState';
 
-export default function Dashboard({ leads, onViewDetails, onAddLead }) {
+export default function Dashboard({ leads, isLoading, onViewDetails, onAddLead, onRefresh }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
 
@@ -29,11 +29,16 @@ export default function Dashboard({ leads, onViewDetails, onAddLead }) {
       if (!searchQuery.trim()) return true;
 
       const q = searchQuery.toLowerCase();
+      const name = (lead.name || '').toLowerCase();
+      const loc = (lead.location || '').toLowerCase();
+      const req = (lead.propertyRequirement || lead.property_requirement || '').toLowerCase();
+      const msg = (lead.customerMessage || lead.customer_message || '').toLowerCase();
+
       return (
-        lead.name.toLowerCase().includes(q) ||
-        lead.location.toLowerCase().includes(q) ||
-        lead.propertyRequirement.toLowerCase().includes(q) ||
-        lead.customerMessage.toLowerCase().includes(q)
+        name.includes(q) ||
+        loc.includes(q) ||
+        req.includes(q) ||
+        msg.includes(q)
       );
     });
   }, [leads, priorityFilter, searchQuery]);
@@ -96,9 +101,21 @@ export default function Dashboard({ leads, onViewDetails, onAddLead }) {
             </button>
           ))}
         </div>
+
+        {onRefresh && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={onRefresh}
+            title="Refresh leads from database"
+          >
+            <RotateCw size={14} className={isLoading ? 'spin-icon' : ''} />
+            <span>Refresh</span>
+          </button>
+        )}
       </div>
 
-      {/* Lead Cards List */}
+      {/* Leads Section Header */}
       <div className="leads-section">
         <div className="leads-section-header">
           <h2 className="section-title">
@@ -110,7 +127,12 @@ export default function Dashboard({ leads, onViewDetails, onAddLead }) {
           </span>
         </div>
 
-        {filteredLeads.length > 0 ? (
+        {isLoading && leads.length === 0 ? (
+          <div className="loading-state-card">
+            <div className="spinner"></div>
+            <p>Loading real estate leads from database...</p>
+          </div>
+        ) : filteredLeads.length > 0 ? (
           <div className="leads-grid">
             {filteredLeads.map((lead) => (
               <LeadCard

@@ -1,13 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Bot, User, Sparkles, CornerDownLeft } from 'lucide-react';
+import { ArrowLeft, Send, Bot, User, Sparkles } from 'lucide-react';
 import PriorityBadge from '../components/PriorityBadge';
+import { chatWithLead } from '../services/api';
 
 export default function LeadChat({ lead, onBack }) {
+  const req = lead?.propertyRequirement || lead?.property_requirement || '';
+  const loc = lead?.location || '';
+  const budget = lead?.budget || '';
+  const timeline = lead?.buyingTimeline || lead?.buying_timeline || '';
+
   const [messages, setMessages] = useState(() => [
     {
       id: 1,
       sender: 'assistant',
-      text: `Hello! I am your AI sales assistant for ${lead?.name || 'this customer'}. I have reviewed their inquiry for ${lead?.propertyRequirement} in ${lead?.location} with budget ${lead?.budget} and timeline "${lead?.buyingTimeline}". How can I help you prepare for this customer?`,
+      text: `Hello! I am your AI sales assistant for ${lead?.name || 'this customer'}. I have reviewed their inquiry for ${req} in ${loc} with budget ${budget} and timeline "${timeline}". How can I help you prepare or close this lead?`,
       timestamp: 'Just now',
     },
   ]);
@@ -41,38 +47,7 @@ export default function LeadChat({ lead, onBack }) {
     'What should I do next?',
   ];
 
-  const generateMockReply = (userQuestion) => {
-    const q = userQuestion.toLowerCase();
-
-    if (q.includes('emphasize') || q.includes('call')) {
-      return `On the call with ${lead.name}, emphasize:
-1. Exact match for ${lead.propertyRequirement} within their ${lead.budget} bracket.
-2. Immediate availability aligned with their "${lead.buyingTimeline}" timeline.
-3. Overcoming their key concern regarding: "${lead.aiAnalysis?.objections?.[0] || 'delivery timelines'}".
-4. Propose an exact site visit timing rather than an open-ended question.`;
-    }
-
-    if (q.includes('concern') || q.includes('objection')) {
-      return `Based on ${lead.name}'s profile, the primary concerns to proactively address are:
-• ${lead.aiAnalysis?.objections?.join('\n• ') || 'Price clarity and paperwork verification'}
-
-Tip: Don't wait for them to bring these up. Reassure them early in the conversation.`;
-    }
-
-    if (q.includes('assertive')) {
-      return `Here is an assertive version of your response to ${lead.name}:
-"Hi ${lead.name}, we have only 2 verified units matching your criteria in ${lead.location} within ${lead.budget}. Due to high weekend inquiry volume, slots for site visits are closing quickly. I can hold an inspection slot for you this Saturday at 11 AM—please confirm so I can reserve it."`;
-    }
-
-    if (q.includes('next') || q.includes('action')) {
-      return `Recommended immediate action for ${lead.name}:
-${lead.aiAnalysis?.recommendedNextAction || 'Call the customer and share floor plans over WhatsApp.'}`;
-    }
-
-    return `For ${lead.name} (${lead.propertyRequirement} in ${lead.location}): Keep the discussion focused on their budget (${lead.budget}) and their timeline (${lead.buyingTimeline}). Offer 2 shortlisted units and secure a firm site inspection appointment.`;
-  };
-
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend) => {
     const text = textToSend || inputText;
     if (!text.trim() || isTyping) return;
 
@@ -87,17 +62,38 @@ ${lead.aiAnalysis?.recommendedNextAction || 'Call the customer and share floor p
     setInputText('');
     setIsTyping(true);
 
-    // Simulate natural AI thinking delay
-    setTimeout(() => {
+    try {
+      // Call real backend API
+      const historyPayload = messages.map((m) => ({
+        sender: m.sender,
+        text: m.text,
+      }));
+      const res = await chatWithLead(lead.id, text.trim(), historyPayload);
+      const replyText = res.response || res.text;
+
       const assistantMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        text: generateMockReply(text),
+        text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
+      console.warn('Real AI chat endpoint error, using contextual fallback:', err);
+      // Fallback lead-grounded response
+      const fallbackReply = `For ${lead.name} (${req} in ${loc}, budget ${budget}):
+Focus on locking in an inspection slot this weekend. Overcome their concerns around pricing clarity and confirmed RERA delivery timelines before negotiating discounts.`;
+
+      const assistantMessage = {
+        id: Date.now() + 1,
+        sender: 'assistant',
+        text: fallbackReply,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } finally {
       setIsTyping(false);
-    }, 450);
+    }
   };
 
   return (
@@ -115,7 +111,7 @@ ${lead.aiAnalysis?.recommendedNextAction || 'Call the customer and share floor p
             <PriorityBadge priority={lead.priority} size="sm" />
           </div>
           <span className="chat-lead-meta">
-            {lead.propertyRequirement} • {lead.location} • Budget: {lead.budget} • Timeline: {lead.buyingTimeline}
+            {req} • {loc} • Budget: {budget} • Timeline: {timeline}
           </span>
         </div>
       </div>
@@ -209,7 +205,7 @@ ${lead.aiAnalysis?.recommendedNextAction || 'Call the customer and share floor p
           </button>
         </form>
         <span className="chat-footer-hint">
-          Enter sends your question. AI uses this specific lead's stored requirements and context.
+          Enter sends your question. AI uses this specific lead's stored requirements, budget, and context.
         </span>
       </div>
     </div>
