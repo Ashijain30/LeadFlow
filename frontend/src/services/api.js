@@ -1,5 +1,5 @@
 /**
- * Centralized API client for Masal AI Backend.
+ * Centralized API client for LeadFlow Backend.
  * Uses Vite proxy (/api -> http://localhost:8000) or explicit API_BASE_URL.
  */
 

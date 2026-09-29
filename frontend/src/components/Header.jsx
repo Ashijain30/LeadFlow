@@ -5,16 +5,18 @@ export default function Header({ currentView, onNavigate }) {
   return (
     <header className="app-navbar">
       <div className="navbar-container">
-        <div className="navbar-brand" onClick={() => onNavigate('dashboard')} role="button" tabIndex={0}>
+        <div
+          className="navbar-brand"
+          onClick={() => onNavigate('dashboard')}
+          role="button"
+          tabIndex={0}
+        >
           <div className="brand-icon-wrapper">
-            <Building2 className="brand-icon" size={24} />
+            <Building2 className="brand-icon" size={20} />
           </div>
           <div className="brand-text">
-            <div className="brand-title-row">
-              <span className="brand-title">Masal AI</span>
-              <span className="brand-badge">Sales Assistant</span>
-            </div>
-            <p className="brand-tagline">Inbound Real Estate Lead Prioritization & Action Hub</p>
+            <span className="brand-title">LeadFlow</span>
+            <span className="brand-tagline">AI-powered real estate sales copilot</span>
           </div>
         </div>
 
@@ -22,20 +24,20 @@ export default function Header({ currentView, onNavigate }) {
           {currentView !== 'dashboard' ? (
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-sm"
               onClick={() => onNavigate('dashboard')}
             >
-              <ArrowLeft size={16} />
-              <span>Back to Dashboard</span>
+              <ArrowLeft size={14} />
+              <span>Dashboard</span>
             </button>
           ) : (
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
               onClick={() => onNavigate('add-lead')}
             >
-              <Plus size={16} />
-              <span>Add New Lead</span>
+              <Plus size={15} />
+              <span>Add Lead</span>
             </button>
           )}
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, Plus, RotateCw } from 'lucide-react';
+import { Search, RotateCw } from 'lucide-react';
 import SummaryCards from '../components/SummaryCards';
 import PriorityQueue from '../components/PriorityQueue';
 import LeadCard from '../components/LeadCard';
@@ -59,28 +59,28 @@ export default function Dashboard({
 
   return (
     <div className="dashboard-page">
-      {/* 1. Compact Horizontal Pipeline Summary Strip */}
+      {/* 1. Compact Horizontal Pipeline Stat/Filter Bar */}
       <SummaryCards
         counts={counts}
         activeFilter={priorityFilter}
         onSelectFilter={setPriorityFilter}
       />
 
-      {/* 2. AI Priority Queue ("Leads that need your attention next") */}
+      {/* 2. AI Priority Queue */}
       <PriorityQueue
         leads={leads}
         onViewDetails={onViewDetails}
         onOpenFollowUp={onOpenFollowUp}
       />
 
-      {/* 3. Search and filter controls bar */}
-      <div className="filter-controls-bar">
+      {/* 3. Compact Search & Refresh Toolbar */}
+      <div className="search-toolbar">
         <div className="search-input-wrapper">
-          <Search size={17} className="search-icon" />
+          <Search size={15} className="search-icon" />
           <input
             type="text"
             className="search-input"
-            placeholder="Search leads by name, city, requirement, or keywords..."
+            placeholder="Search leads..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -96,70 +96,31 @@ export default function Dashboard({
           )}
         </div>
 
-        <div className="priority-filter-tabs">
-          <SlidersHorizontal size={14} className="filter-icon" />
-          {['ALL', 'HOT', 'WARM', 'COLD'].map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={`filter-tab ${priorityFilter === tab ? 'is-active' : ''}`}
-              onClick={() => setPriorityFilter(tab)}
-            >
-              {tab === 'ALL' ? 'All Leads' : tab}
-              <span className="tab-count">
-                {tab === 'ALL'
-                  ? counts.total
-                  : tab === 'HOT'
-                    ? counts.hot
-                    : tab === 'WARM'
-                      ? counts.warm
-                      : counts.cold}
-              </span>
-            </button>
-          ))}
-        </div>
-
         {onRefresh && (
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm refresh-btn"
             onClick={onRefresh}
-            title="Refresh leads from database"
+            title="Refresh leads"
           >
-            <RotateCw size={14} className={isLoading ? 'spin-icon' : ''} />
+            <RotateCw size={13} className={isLoading ? 'spin-icon' : ''} />
             <span>Refresh</span>
           </button>
         )}
       </div>
 
-      {/* 4. Leads Section Grid */}
+      {/* 4. Leads Grid */}
       <div className="leads-section">
         <div className="leads-section-header">
-          <div className="leads-section-titles">
-            <h2 className="section-title">
-              Inbound Leads{' '}
-              <span className="leads-count-badge">({filteredLeads.length})</span>
-            </h2>
-            <span className="section-subtitle">
-              Prioritized by urgency, budget feasibility, and customer intent
-            </span>
-          </div>
-          {onAddLead && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={onAddLead}
-            >
-              <Plus size={14} />
-              <span>Add Lead</span>
-            </button>
-          )}
+          <h2 className="section-title">
+            {filteredLeads.length} Leads
+          </h2>
         </div>
 
         {isLoading && leads.length === 0 ? (
           <div className="loading-state-card">
             <div className="spinner"></div>
-            <p>Loading real estate leads from database...</p>
+            <p>Loading leads...</p>
           </div>
         ) : filteredLeads.length > 0 ? (
           <div className="leads-grid">
@@ -177,8 +138,8 @@ export default function Dashboard({
           <EmptyState
             message={
               searchQuery || priorityFilter !== 'ALL'
-                ? `No leads match "${searchQuery || priorityFilter}". Try adjusting your filters.`
-                : 'No leads available in the pipeline yet.'
+                ? `No leads match your filter.`
+                : 'No leads available yet.'
             }
             onReset={handleResetFilters}
             onAddLead={onAddLead}
