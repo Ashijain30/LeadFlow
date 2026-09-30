@@ -12,7 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import PriorityBadge from '../components/PriorityBadge';
-import { getShortLeadSummary } from '../utils/leadHelpers';
+import { getCleanExecutiveSummary } from '../utils/leadHelpers';
 
 export default function LeadDetails({
   lead,
@@ -66,9 +66,9 @@ export default function LeadDetails({
     created_at,
   } = lead;
 
-  const req = propertyRequirement || property_requirement;
-  const timeline = buyingTimeline || buying_timeline;
-  const msg = customerMessage || customer_message;
+  const req = propertyRequirement || property_requirement || '';
+  const timeline = buyingTimeline || buying_timeline || '';
+  const msg = customerMessage || customer_message || '';
   const analysis = aiAnalysis || ai_analysis || {};
   const lastContacted = lastContactedAt || last_contacted_at;
   const nextFollowUp = nextFollowUpAt || next_follow_up_at;
@@ -76,17 +76,39 @@ export default function LeadDetails({
 
   // AI Structured Fields
   const rawSummary = analysis.summary || '';
-  const intent = analysis.intent || analysis.customer_intent || 'High purchase intent';
+  const rawIntent = analysis.intent || analysis.customer_intent || 'High purchase intent';
   const keyReqs = analysis.key_requirements || analysis.keyRequirements || [req, location, budget, timeline].filter(Boolean);
   const objections = analysis.objections || analysis.concerns || ['Requires verified project approvals and clear pricing'];
   const nextAction = analysis.recommended_next_action || analysis.recommendedNextAction || 'Call within 2 hours to confirm inspection';
   const suggestedResp = analysis.suggested_response || analysis.suggestedResponse || `Hi ${name}, thank you for reaching out! We have shortlisted verified properties matching your requirements in ${location}.`;
 
-  // Focus 1-2 sentence AI summary
-  const executiveSummary =
-    rawSummary && rawSummary.length > 20 && !rawSummary.toLowerCase().includes('pts')
-      ? rawSummary
-      : `${name} is looking for a ${req} in ${location} within ${budget}. Ready to evaluate verified project options and should be contacted soon.`;
+  // Clean and subtle AI summary
+  const executiveSummary = getCleanExecutiveSummary(lead, rawSummary);
+
+  // Clean and nuanced customer intent
+  const isCommercial =
+    req.toLowerCase().includes('commercial') ||
+    req.toLowerCase().includes('office') ||
+    req.toLowerCase().includes('retail') ||
+    msg.toLowerCase().includes('rental yield') ||
+    (location || '').toLowerCase().includes('gachibowli');
+
+  let cleanIntent = rawIntent;
+  if (isCommercial && cleanIntent.toLowerCase().includes('home')) {
+    cleanIntent = 'Commercial Investment / Rental Yield';
+  }
+
+  // Clean bullet requirements
+  const cleanKeyReqs = (Array.isArray(keyReqs) ? keyReqs : [req, location, budget, timeline].filter(Boolean)).map(
+    (item) =>
+      typeof item === 'string'
+        ? item
+            .replace(/^Unit Type:\s*/i, '')
+            .replace(/^Target Locality:\s*/i, 'Locality: ')
+            .replace(/^Stated Budget:\s*/i, 'Budget: ')
+            .replace(/^Move-in Horizon:\s*/i, 'Timeline: ')
+        : item
+  );
 
   const handleCopySuggestedResponse = () => {
     if (suggestedResp) {
@@ -273,23 +295,28 @@ export default function LeadDetails({
         {/* ================= LEFT COLUMN: AI Strategy & Insights ================= */}
         <div className="details-left-col">
           {/* 1. AI Summary */}
-          <div className="detail-card">
-            <span className="detail-card-label">AI SUMMARY</span>
+          <div className="detail-card ai-summary-card">
+            <div className="detail-card-header-row">
+              <span className="detail-card-label">AI EXECUTIVE SUMMARY</span>
+              <span className="subtle-copilot-pill">LeadFlow Intelligence</span>
+            </div>
             <p className="ai-summary-highlight">{executiveSummary}</p>
           </div>
 
           {/* 2. Customer Intent */}
           <div className="detail-card">
             <span className="detail-card-label">CUSTOMER INTENT</span>
-            <p className="detail-card-body">{intent}</p>
+            <div className="intent-badge-row">
+              <span className="intent-badge">{cleanIntent}</span>
+            </div>
           </div>
 
           {/* 3. Key Requirements */}
           <div className="detail-card">
             <span className="detail-card-label">KEY REQUIREMENTS</span>
             <ul className="clean-bullets-list">
-              {Array.isArray(keyReqs) && keyReqs.length > 0 ? (
-                keyReqs.map((item, idx) => <li key={idx}>{item}</li>)
+              {cleanKeyReqs.length > 0 ? (
+                cleanKeyReqs.map((item, idx) => <li key={idx}>{item}</li>)
               ) : (
                 <li>{req} in {location}</li>
               )}
@@ -309,9 +336,9 @@ export default function LeadDetails({
           </div>
 
           {/* 5. Recommended Next Action */}
-          <div className="detail-card">
-            <span className="detail-card-label">NEXT ACTION</span>
-            <p className="detail-card-body font-medium">{nextAction}</p>
+          <div className="detail-card next-action-card">
+            <span className="detail-card-label">RECOMMENDED NEXT ACTION</span>
+            <p className="next-action-body font-medium">{nextAction}</p>
           </div>
 
           {/* 6. Suggested First Response */}

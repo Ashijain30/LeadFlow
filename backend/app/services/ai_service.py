@@ -34,47 +34,131 @@ def get_gemini_client() -> Optional[genai.Client]:
 
 
 def fallback_lead_analysis(lead_data: Dict[str, Any]) -> AIAnalysisSchema:
-    """Generate high-quality contextual lead analysis when Gemini API is unavailable."""
+    """Generate high-quality contextual lead analysis with clean, subtle, non-robotic intelligence."""
     name = lead_data.get("name", "Customer")
     req = lead_data.get("property_requirement", "property")
-    loc = lead_data.get("location", "the city")
+    loc = lead_data.get("location", "prime location")
     budget = lead_data.get("budget", "unspecified budget")
     timeline = lead_data.get("buying_timeline", "flexible timeline")
-    msg = lead_data.get("customer_message", "")
+    msg = (lead_data.get("customer_message") or "").strip()
 
-    summary = (
-        f"{name} is actively seeking a {req} in {loc} within {budget}. "
-        f"Purchase timeframe is '{timeline}' with an inbound note expressing interest."
+    req_lower = req.lower()
+    msg_lower = msg.lower()
+    time_lower = timeline.lower()
+
+    is_commercial = any(
+        k in req_lower or k in msg_lower
+        for k in ["commercial", "office", "retail", "shop", "rental yield", "yield", "financial district", "gachibowli"]
+    )
+    is_immediate = any(k in time_lower for k in ["immediate", "1 month", "ready", "soon"])
+    is_luxury = any(k in budget for k in ["Cr", "crore", "4.", "5."]) or any(
+        k in req_lower for k in ["villa", "luxury", "penthouse", "lower parel", "worli"]
     )
 
-    intent = (
-        "Immediate end-user purchase"
-        if any(w in timeline.lower() for w in ["immediate", "1 month", "ready"])
-        else "Planned end-user home upgrade"
-    )
-
-    key_requirements = [
-        f"Unit Type: {req}",
-        f"Target Locality: {loc}",
-        f"Stated Budget: {budget}",
-        f"Move-in Horizon: {timeline}",
-    ]
-
-    objections = [
-        "Clarity on total all-inclusive cost, maintenance, and registration fees",
-        "Verification of RERA completion status and site visit availability",
-    ]
-    if "price" in msg.lower() or "rate" in msg.lower():
-        objections.append("High price sensitivity / rate negotiation expectation")
-
-    recommended_next_action = (
-        f"Call {name} within 2 hours to confirm a private site visit and send 2 verified project options over WhatsApp."
-    )
-
-    suggested_response = (
-        f"Hi {name}, thank you for reaching out! We have two excellent verified options for {req} in {loc} "
-        f"that match your budget of {budget}. Would you be free for a 5-minute call today to discuss details?"
-    )
+    if is_commercial:
+        summary = (
+            f"Exploring commercial investment opportunities in {loc} for rental yield. "
+            f"Flexible {timeline.lower()} decision horizon; prioritizes market brochures and verified ROI benchmarks before direct calls."
+        )
+        intent = "Commercial Investment / Rental Yield"
+        key_requirements = [
+            f"{req} in {loc}",
+            f"Target budget: {budget}",
+            "Verified rental yields and stable tenant profile",
+            f"Purchase horizon: {timeline}",
+        ]
+        objections = [
+            "Commercial vacancy risk and realistic rental yield predictability",
+            "Long evaluation cycle requiring comparative market validation",
+        ]
+        recommended_next_action = f"Email {loc} commercial yield overview with verified tenant ROI benchmarks."
+        suggested_response = (
+            f"Hi {name}, I have shared our Western Hyderabad commercial yield report with key rental metrics. "
+            f"Whenever you are ready to evaluate pre-leased assets with confirmed returns, I would be glad to share shortlisted options."
+        )
+    elif is_immediate and is_luxury:
+        summary = (
+            f"High-capital buyer actively seeking premium {req} in {loc}. "
+            f"Immediate purchase readiness; expects verified title documents and priority site inspection."
+        )
+        intent = "High-Net-Worth Luxury Acquisition"
+        key_requirements = [
+            f"Premium {req} in {loc}",
+            f"Budget bracket: {budget}",
+            "Confirmed RERA approvals and clear title",
+            "Ready for private site preview this week",
+        ]
+        objections = [
+            "Privacy, developer pedigree, and long-term project exclusivity",
+            "Clarity on premium amenity charges and floor-rise pricing",
+        ]
+        recommended_next_action = f"Call {name} within 2 hours to arrange a private walkthrough."
+        suggested_response = (
+            f"Dear {name}, we have shortlisted two exceptional verified properties matching your {req} requirement in {loc}. "
+            f"Would tomorrow morning work for a confidential discussion or private preview?"
+        )
+    elif is_immediate:
+        summary = (
+            f"Motivated homebuyer seeking {req} in {loc} with an immediate move-in horizon. "
+            f"Well-defined budget ({budget}); prioritizes ready-to-move units with clear pricing breakdowns."
+        )
+        intent = "Immediate Primary Residence Purchase"
+        key_requirements = [
+            f"{req} in {loc}",
+            f"All-inclusive budget: {budget}",
+            "Ready-to-move or imminent possession",
+            "Near-term move-in timeline",
+        ]
+        objections = [
+            "Hidden registration, maintenance, or parking costs",
+            "Speed of bank loan sanction and possession handover",
+        ]
+        recommended_next_action = f"Call {name} within 2 hours to schedule a site visit this weekend."
+        suggested_response = (
+            f"Hi {name}, thank you for reaching out! We have two verified ready-to-move options for {req} in {loc} "
+            f"within {budget}. Let's connect for 5 minutes today to review the floor plans."
+        )
+    elif "baner" in loc.lower() or "hinjewadi" in msg_lower or "2–3" in time_lower or "4–6" in time_lower:
+        summary = (
+            f"Working professional looking for {req} in {loc} aligned with work commute. "
+            f"Purchase planned within {timeline.lower()}; comparing builder reputation and payment flexibility."
+        )
+        intent = "Mid-Term Primary Home Purchase"
+        key_requirements = [
+            f"{req} in {loc}",
+            f"Budget within {budget}",
+            "Convenient commute to major business hubs",
+            "Flexible construction-linked payment structure",
+        ]
+        objections = [
+            "Project delivery risk and possession schedule delays",
+            "Evaluating multiple competing developers in the micro-market",
+        ]
+        recommended_next_action = f"Share 2 shortlisted projects with flexible payment schemes via WhatsApp."
+        suggested_response = (
+            f"Hello {name}, we have shortlisted two fast-progressing projects in {loc} matching your {budget} budget. "
+            f"Would you be open to a quick call this evening to review possession timelines?"
+        )
+    else:
+        summary = (
+            f"Inquiring for {req} in {loc} with a {timeline.lower()} purchase horizon. "
+            f"Evaluating initial shortlists within {budget} and reviewing project comparisons."
+        )
+        intent = "Planned End-User Purchase"
+        key_requirements = [
+            f"{req} in {loc}",
+            f"Stated budget: {budget}",
+            f"Timeline: {timeline}",
+        ]
+        objections = [
+            "Need for verified legal clearances and construction quality proof",
+            "Price per square foot benchmark in the micro-market",
+        ]
+        recommended_next_action = f"Share curated project brochures matching the {budget} range."
+        suggested_response = (
+            f"Hi {name}, thank you for inquiring! We have curated options for {req} in {loc} "
+            f"fitting your budget. Let me know if I may send over the project dossiers."
+        )
 
     return AIAnalysisSchema(
         summary=summary,
@@ -95,24 +179,24 @@ def analyze_lead_with_ai(lead_data: Dict[str, Any]) -> Dict[str, Any]:
         return fallback_lead_analysis(lead_data).model_dump()
 
     prompt = f"""
-You are a senior real estate sales analyst. Analyze the following inbound real estate lead.
-Extract actionable sales intelligence specifically grounded in the provided details.
+You are a senior real estate sales strategist. Analyze this inbound property inquiry for a salesperson.
+Write in a clean, executive, professional tone. Avoid generic templates, filler words, or repeating form fields.
 
-CUSTOMER DETAILS:
-- Full Name: {lead_data.get('name')}
+CUSTOMER INQUIRY:
+- Name: {lead_data.get('name')}
 - Location: {lead_data.get('location')}
-- Property Requirement: {lead_data.get('property_requirement')}
+- Property: {lead_data.get('property_requirement')}
 - Budget: {lead_data.get('budget')}
-- Buying Timeline: {lead_data.get('buying_timeline')}
-- Inbound Customer Message: "{lead_data.get('customer_message')}"
+- Timeline: {lead_data.get('buying_timeline')}
+- Message: "{lead_data.get('customer_message')}"
 
 Produce a structured JSON response containing:
-1. summary (concise 2-sentence executive summary)
-2. intent (customer's buying intent)
-3. key_requirements (list of verified specific requirements)
-4. objections (list of realistic buyer concerns or objections to proactively solve)
-5. recommended_next_action (high-priority immediate action for the salesperson)
-6. suggested_response (ready-to-send personalized message to customer)
+1. summary: A clean, subtle, 1-2 sentence executive summary capturing the customer's true motivation, decision timeline, and specific priorities (NOT a robotic restatement of fields).
+2. intent: Accurate intent category (e.g. "Commercial Investment / Rental Yield", "Immediate Primary Residence Purchase", "High-Net-Worth Luxury Acquisition", "Mid-Term Primary Home Purchase", "Exploratory / Long-Term Evaluation").
+3. key_requirements: 3-4 clean, specific requirements (bullet points).
+4. objections: 2-3 genuine buyer hesitations or friction points to solve proactively.
+5. recommended_next_action: Concise, high-leverage immediate action for the salesperson.
+6. suggested_response: Polished, professional, personalized first reply ready to send.
 """
     try:
         response = client.models.generate_content(
@@ -126,7 +210,6 @@ Produce a structured JSON response containing:
         )
         if response and response.text:
             data = json.loads(response.text)
-            # Validate through Pydantic
             validated = AIAnalysisSchema.model_validate(data)
             return validated.model_dump()
     except Exception as e:
