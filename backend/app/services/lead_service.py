@@ -35,7 +35,7 @@ def get_lead_by_id(db: Session, lead_id: int) -> Optional[Lead]:
     return db.query(Lead).filter(Lead.id == lead_id).first()
 
 
-def create_lead(db: Session, lead_in: LeadCreate, run_ai: bool = True) -> Lead:
+def create_lead(db: Session, lead_in: LeadCreate, run_ai: bool = False) -> Lead:
     """Create and persist a new lead, computing priority and AI analysis."""
     # 1. Compute transparent priority
     priority, reason = calculate_lead_priority(
@@ -183,4 +183,4 @@ def seed_default_leads_if_empty(db: Session):
     ]
 
     for data in sample_leads:
-        create_lead(db, LeadCreate(**data), run_ai=True)
+        create_lead(db, LeadCreate(**data), run_ai=False)

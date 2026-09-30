@@ -89,68 +89,6 @@ export function getShortLeadSummary(lead) {
 export const getShortSummary = getShortLeadSummary;
 
 /**
- * Returns a clean, subtle, analytical executive summary for Lead Details.
- * Eliminates generic mad-libs templates (e.g. "X is actively seeking a Y in Z within W").
- */
-export function getCleanExecutiveSummary(lead, rawSummary) {
-  if (!lead) return 'Prospective buyer evaluating shortlisted property developments.';
-
-  const name = lead.name || '';
-  const loc = lead.location || '';
-  const req = lead.propertyRequirement || lead.property_requirement || '';
-  const budget = lead.budget || '';
-  const timeline = (lead.buyingTimeline || lead.buying_timeline || '').toLowerCase();
-  const msg = (lead.customerMessage || lead.customer_message || '').toLowerCase();
-
-  // If rawSummary exists and is NOT a robotic template
-  if (
-    rawSummary &&
-    rawSummary.length > 25 &&
-    !rawSummary.toLowerCase().includes('pts') &&
-    !rawSummary.toLowerCase().includes('score') &&
-    !rawSummary.toLowerCase().includes('actively seeking a') &&
-    !rawSummary.toLowerCase().includes('with an inbound note expressing interest')
-  ) {
-    return rawSummary;
-  }
-
-  const isCommercial =
-    req.toLowerCase().includes('commercial') ||
-    req.toLowerCase().includes('office') ||
-    req.toLowerCase().includes('retail') ||
-    loc.toLowerCase().includes('gachibowli') ||
-    msg.includes('rental yield') ||
-    msg.includes('commercial');
-
-  const isImmediate =
-    timeline.includes('immediate') ||
-    timeline.includes('1 month') ||
-    timeline.includes('ready') ||
-    timeline.includes('soon');
-
-  const isLuxury =
-    budget.includes('Cr') ||
-    budget.includes('crore') ||
-    budget.includes('4.') ||
-    budget.includes('5.');
-
-  if (isCommercial) {
-    return `Exploring commercial investment opportunities in ${loc} for rental yield. Flexible ${timeline} decision horizon; prioritizes market brochures and verified ROI benchmarks before scheduling calls.`;
-  }
-  if (isImmediate && isLuxury) {
-    return `High-capital buyer actively evaluating premium ${req} options in ${loc}. Immediate purchase readiness; prioritizes verified title documents and priority site inspection.`;
-  }
-  if (isImmediate) {
-    return `Motivated homebuyer seeking ${req} in ${loc} with an immediate move-in horizon. Well-defined budget (${budget}); prioritizes ready-to-move units with clear pricing breakdowns.`;
-  }
-  if (timeline.includes('2') || timeline.includes('3') || timeline.includes('4') || timeline.includes('6')) {
-    return `Working professional shortlisting ${req} in ${loc}. Purchase planned within ${timeline}; comparing builder track records and construction-linked payment flexibility.`;
-  }
-
-  return `Inquiring for ${req} in ${loc} with a ${timeline} purchase horizon. Evaluating shortlisted developments within ${budget} before scheduling on-site visits.`;
-}
-
-/**
  * Condenses recommended next action into a punchy 2-4 word phrase.
  * e.g. "Call within 2h", "Schedule site visit", "Send 2 options"
  */

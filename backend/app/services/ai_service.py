@@ -1,13 +1,27 @@
 import json
 import logging
+import time
 from typing import Dict, Any, List, Optional
 from google import genai
 from google.genai import types
+from google.genai.errors import ServerError, APIError
+from fastapi import HTTPException, status
 from app.config import get_settings
 from app.schemas import AIAnalysisSchema
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def _sanitize_error(error: Optional[Exception]) -> str:
+    """Return error message with sensitive API key tokens redacted."""
+    if not error:
+        return "Unknown error"
+    msg = str(error)
+    key = settings.gemini_api_key
+    if key and len(key) > 8:
+        msg = msg.replace(key, "[REDACTED_API_KEY]")
+    return msg
 
 
 def is_api_key_configured() -> bool:
@@ -23,142 +37,120 @@ def is_api_key_configured() -> bool:
 
 
 def get_gemini_client() -> Optional[genai.Client]:
-    """Instantiate and return the GenAI client if key is available."""
+    """Instantiate and return the GenAI client if key is configured."""
     if not is_api_key_configured():
         return None
     try:
         return genai.Client(api_key=settings.gemini_api_key)
     except Exception as e:
-        logger.error("Failed to initialize GenAI client: %s", e)
+        logger.error("Failed to initialize GenAI client: %s", _sanitize_error(e))
         return None
 
 
+def _generate_with_gemini(
+    contents: Any,
+    config: Optional[types.GenerateContentConfig] = None,
+    max_retries: int = 3,
+) -> types.GenerateContentResponse:
+    """Execute Gemini generate_content using configured GEMINI_MODEL with exponential backoff on 503.
+
+    Retries only the configured model (gemini-3.8-flash) up to max_retries (1s, 2s, 4s).
+    Does NOT hammer multiple models.
+    Raises HTTPException 503 if retries fail.
+    Never exposes API keys in logs or errors.
+    """
+    client = get_gemini_client()
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Gemini AI service is not configured. Please provide a valid GEMINI_API_KEY in backend/.env.",
+        )
+
+    model_name = settings.gemini_model or "gemini-3.8-flash"
+    last_error: Optional[Exception] = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=config,
+            )
+            if response and response.text:
+                return response
+        except (ServerError, APIError) as e:
+            last_error = e
+            clean_msg = _sanitize_error(e)
+            logger.warning(
+                "Gemini model '%s' attempt %d/%d failed: %s",
+                model_name,
+                attempt,
+                max_retries,
+                clean_msg,
+            )
+            if attempt < max_retries:
+                backoff = 2 ** (attempt - 1)  # 1s, 2s
+                time.sleep(backoff)
+            continue
+        except Exception as e:
+            last_error = e
+            clean_msg = _sanitize_error(e)
+            logger.error("Gemini generation error: %s", clean_msg)
+            if attempt < max_retries:
+                backoff = 2 ** (attempt - 1)
+                time.sleep(backoff)
+            continue
+
+    sanitized = _sanitize_error(last_error)
+    logger.error("Gemini generation failed after %d retries: %s", max_retries, sanitized)
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Gemini is temporarily unavailable. Please try again shortly.",
+    )
+
+
 def fallback_lead_analysis(lead_data: Dict[str, Any]) -> AIAnalysisSchema:
-    """Generate high-quality contextual lead analysis with clean, subtle, non-robotic intelligence."""
+    """Generate structured baseline lead analysis deterministically without calling Gemini."""
     name = lead_data.get("name", "Customer")
     req = lead_data.get("property_requirement", "property")
-    loc = lead_data.get("location", "prime location")
+    loc = lead_data.get("location", "the city")
     budget = lead_data.get("budget", "unspecified budget")
     timeline = lead_data.get("buying_timeline", "flexible timeline")
-    msg = (lead_data.get("customer_message") or "").strip()
+    msg = lead_data.get("customer_message", "")
 
-    req_lower = req.lower()
-    msg_lower = msg.lower()
-    time_lower = timeline.lower()
-
-    is_commercial = any(
-        k in req_lower or k in msg_lower
-        for k in ["commercial", "office", "retail", "shop", "rental yield", "yield", "financial district", "gachibowli"]
-    )
-    is_immediate = any(k in time_lower for k in ["immediate", "1 month", "ready", "soon"])
-    is_luxury = any(k in budget for k in ["Cr", "crore", "4.", "5."]) or any(
-        k in req_lower for k in ["villa", "luxury", "penthouse", "lower parel", "worli"]
+    summary = (
+        f"{name} is actively seeking a {req} in {loc} within {budget}. "
+        f"Purchase timeframe is '{timeline}' with an inbound note expressing interest."
     )
 
-    if is_commercial:
-        summary = (
-            f"Exploring commercial investment opportunities in {loc} for rental yield. "
-            f"Flexible {timeline.lower()} decision horizon; prioritizes market brochures and verified ROI benchmarks before direct calls."
-        )
-        intent = "Commercial Investment / Rental Yield"
-        key_requirements = [
-            f"{req} in {loc}",
-            f"Target budget: {budget}",
-            "Verified rental yields and stable tenant profile",
-            f"Purchase horizon: {timeline}",
-        ]
-        objections = [
-            "Commercial vacancy risk and realistic rental yield predictability",
-            "Long evaluation cycle requiring comparative market validation",
-        ]
-        recommended_next_action = f"Email {loc} commercial yield overview with verified tenant ROI benchmarks."
-        suggested_response = (
-            f"Hi {name}, I have shared our Western Hyderabad commercial yield report with key rental metrics. "
-            f"Whenever you are ready to evaluate pre-leased assets with confirmed returns, I would be glad to share shortlisted options."
-        )
-    elif is_immediate and is_luxury:
-        summary = (
-            f"High-capital buyer actively seeking premium {req} in {loc}. "
-            f"Immediate purchase readiness; expects verified title documents and priority site inspection."
-        )
-        intent = "High-Net-Worth Luxury Acquisition"
-        key_requirements = [
-            f"Premium {req} in {loc}",
-            f"Budget bracket: {budget}",
-            "Confirmed RERA approvals and clear title",
-            "Ready for private site preview this week",
-        ]
-        objections = [
-            "Privacy, developer pedigree, and long-term project exclusivity",
-            "Clarity on premium amenity charges and floor-rise pricing",
-        ]
-        recommended_next_action = f"Call {name} within 2 hours to arrange a private walkthrough."
-        suggested_response = (
-            f"Dear {name}, we have shortlisted two exceptional verified properties matching your {req} requirement in {loc}. "
-            f"Would tomorrow morning work for a confidential discussion or private preview?"
-        )
-    elif is_immediate:
-        summary = (
-            f"Motivated homebuyer seeking {req} in {loc} with an immediate move-in horizon. "
-            f"Well-defined budget ({budget}); prioritizes ready-to-move units with clear pricing breakdowns."
-        )
-        intent = "Immediate Primary Residence Purchase"
-        key_requirements = [
-            f"{req} in {loc}",
-            f"All-inclusive budget: {budget}",
-            "Ready-to-move or imminent possession",
-            "Near-term move-in timeline",
-        ]
-        objections = [
-            "Hidden registration, maintenance, or parking costs",
-            "Speed of bank loan sanction and possession handover",
-        ]
-        recommended_next_action = f"Call {name} within 2 hours to schedule a site visit this weekend."
-        suggested_response = (
-            f"Hi {name}, thank you for reaching out! We have two verified ready-to-move options for {req} in {loc} "
-            f"within {budget}. Let's connect for 5 minutes today to review the floor plans."
-        )
-    elif "baner" in loc.lower() or "hinjewadi" in msg_lower or "2–3" in time_lower or "4–6" in time_lower:
-        summary = (
-            f"Working professional looking for {req} in {loc} aligned with work commute. "
-            f"Purchase planned within {timeline.lower()}; comparing builder reputation and payment flexibility."
-        )
-        intent = "Mid-Term Primary Home Purchase"
-        key_requirements = [
-            f"{req} in {loc}",
-            f"Budget within {budget}",
-            "Convenient commute to major business hubs",
-            "Flexible construction-linked payment structure",
-        ]
-        objections = [
-            "Project delivery risk and possession schedule delays",
-            "Evaluating multiple competing developers in the micro-market",
-        ]
-        recommended_next_action = f"Share 2 shortlisted projects with flexible payment schemes via WhatsApp."
-        suggested_response = (
-            f"Hello {name}, we have shortlisted two fast-progressing projects in {loc} matching your {budget} budget. "
-            f"Would you be open to a quick call this evening to review possession timelines?"
-        )
-    else:
-        summary = (
-            f"Inquiring for {req} in {loc} with a {timeline.lower()} purchase horizon. "
-            f"Evaluating initial shortlists within {budget} and reviewing project comparisons."
-        )
-        intent = "Planned End-User Purchase"
-        key_requirements = [
-            f"{req} in {loc}",
-            f"Stated budget: {budget}",
-            f"Timeline: {timeline}",
-        ]
-        objections = [
-            "Need for verified legal clearances and construction quality proof",
-            "Price per square foot benchmark in the micro-market",
-        ]
-        recommended_next_action = f"Share curated project brochures matching the {budget} range."
-        suggested_response = (
-            f"Hi {name}, thank you for inquiring! We have curated options for {req} in {loc} "
-            f"fitting your budget. Let me know if I may send over the project dossiers."
-        )
+    intent = (
+        "Immediate end-user purchase"
+        if any(w in timeline.lower() for w in ["immediate", "1 month", "ready"])
+        else "Planned end-user home upgrade"
+    )
+
+    key_requirements = [
+        f"Unit Type: {req}",
+        f"Target Locality: {loc}",
+        f"Stated Budget: {budget}",
+        f"Move-in Horizon: {timeline}",
+    ]
+
+    objections = [
+        "Clarity on total all-inclusive cost, maintenance, and registration fees",
+        "Verification of RERA completion status and site visit availability",
+    ]
+    if "price" in msg.lower() or "rate" in msg.lower():
+        objections.append("High price sensitivity / rate negotiation expectation")
+
+    recommended_next_action = (
+        f"Call {name} within 2 hours to confirm a private site visit and send 2 verified project options over WhatsApp."
+    )
+
+    suggested_response = (
+        f"Hi {name}, thank you for reaching out! We have two excellent verified options for {req} in {loc} "
+        f"that match your budget of {budget}. Would you be free for a 5-minute call today to discuss details?"
+    )
 
     return AIAnalysisSchema(
         summary=summary,
@@ -171,59 +163,55 @@ def fallback_lead_analysis(lead_data: Dict[str, Any]) -> AIAnalysisSchema:
 
 
 def analyze_lead_with_ai(lead_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Execute structured lead analysis using real Gemini API or robust fallback."""
-    client = get_gemini_client()
+    """Execute structured lead analysis using Gemini 3.8 Flash.
 
-    if not client:
-        logger.info("Gemini API key not active or absent. Using contextual analyzer.")
-        return fallback_lead_analysis(lead_data).model_dump()
-
+    Uses configured GEMINI_MODEL with Pydantic structured output.
+    Raises HTTPException 503 if Gemini is unavailable.
+    """
     prompt = f"""
-You are a senior real estate sales strategist. Analyze this inbound property inquiry for a salesperson.
-Write in a clean, executive, professional tone. Avoid generic templates, filler words, or repeating form fields.
+You are a senior real estate sales analyst. Analyze the following inbound real estate lead.
+Extract actionable sales intelligence specifically grounded in the provided details.
 
-CUSTOMER INQUIRY:
-- Name: {lead_data.get('name')}
+CUSTOMER DETAILS:
+- Full Name: {lead_data.get('name')}
 - Location: {lead_data.get('location')}
-- Property: {lead_data.get('property_requirement')}
+- Property Requirement: {lead_data.get('property_requirement')}
 - Budget: {lead_data.get('budget')}
-- Timeline: {lead_data.get('buying_timeline')}
-- Message: "{lead_data.get('customer_message')}"
+- Buying Timeline: {lead_data.get('buying_timeline')}
+- Inbound Customer Message: "{lead_data.get('customer_message')}"
 
 Produce a structured JSON response containing:
-1. summary: A clean, subtle, 1-2 sentence executive summary capturing the customer's true motivation, decision timeline, and specific priorities (NOT a robotic restatement of fields).
-2. intent: Accurate intent category (e.g. "Commercial Investment / Rental Yield", "Immediate Primary Residence Purchase", "High-Net-Worth Luxury Acquisition", "Mid-Term Primary Home Purchase", "Exploratory / Long-Term Evaluation").
-3. key_requirements: 3-4 clean, specific requirements (bullet points).
-4. objections: 2-3 genuine buyer hesitations or friction points to solve proactively.
-5. recommended_next_action: Concise, high-leverage immediate action for the salesperson.
-6. suggested_response: Polished, professional, personalized first reply ready to send.
+1. summary (concise 2-sentence executive summary)
+2. intent (customer's buying intent)
+3. key_requirements (list of verified specific requirements)
+4. objections (list of realistic buyer concerns or objections to proactively solve)
+5. recommended_next_action (high-priority immediate action for the salesperson)
+6. suggested_response (ready-to-send personalized message to customer)
 """
-    try:
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.3,
-                response_mime_type="application/json",
-                response_schema=AIAnalysisSchema,
-            ),
-        )
-        if response and response.text:
-            data = json.loads(response.text)
-            validated = AIAnalysisSchema.model_validate(data)
-            return validated.model_dump()
-    except Exception as e:
-        logger.warning("Gemini lead analysis call failed: %s. Falling back to deterministic analysis.", e)
 
-    return fallback_lead_analysis(lead_data).model_dump()
+    cfg = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=AIAnalysisSchema,
+        thinking_config=types.ThinkingConfig(thinking_level="low"),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
+
+    response = _generate_with_gemini(contents=prompt, config=cfg)
+    data = json.loads(response.text)
+    validated = AIAnalysisSchema.model_validate(data)
+    return validated.model_dump()
 
 
 def chat_with_lead_ai(
     lead_data: Dict[str, Any], question: str, history: Optional[List[Dict[str, str]]] = None
 ) -> str:
-    """Provide lead-grounded conversational answers to assist the salesperson."""
-    client = get_gemini_client()
+    """Provide lead-grounded conversational answers to assist the salesperson.
 
+    Passes the salesperson's actual message + conversation history + lead profile
+    directly to Gemini.
+    Never returns hardcoded or fake static responses.
+    Raises HTTPException 503 if Gemini is unavailable.
+    """
     lead_context = (
         f"LEAD PROFILE:\n"
         f"- Name: {lead_data.get('name')}\n"
@@ -243,81 +231,53 @@ def chat_with_lead_ai(
             f"- Recommended Action: {ai_analysis.get('recommended_next_action')}\n"
         )
 
-    if client:
-        system_prompt = (
-            "You are an expert Real Estate Sales Coach and Co-Pilot. "
-            "You are assisting a salesperson with a specific inbound lead. "
-            "Answer questions strictly grounded in this lead's context, budget, timeline, and objections. "
-            "Give practical, concise, and direct sales advice."
-        )
+    system_prompt = (
+        "You are an expert Real Estate Sales Coach and Co-Pilot. "
+        "You are assisting a salesperson with a specific inbound lead. "
+        "Answer questions strictly grounded in this lead's context, budget, timeline, and objections. "
+        "Give practical, concise, and direct sales advice."
+    )
 
-        user_content = f"{lead_context}\n\nSALESPERSON'S QUESTION: {question}"
+    conv_history_str = ""
+    if history:
+        conv_history_str = "PREVIOUS CONVERSATION HISTORY:\n" + "\n".join(
+            [f"{item.get('sender', 'user').capitalize()}: {item.get('text', '')}" for item in history]
+        ) + "\n\n"
 
-        try:
-            response = client.models.generate_content(
-                model=settings.gemini_model,
-                contents=user_content,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.4,
-                ),
-            )
-            if response and response.text:
-                return response.text.strip()
-        except Exception as e:
-            logger.warning("Gemini chat call failed: %s. Using contextual reply.", e)
+    user_content = f"{lead_context}\n\n{conv_history_str}SALESPERSON'S LATEST MESSAGE: {question}"
 
-    # Fallback contextual reply
-    q = question.lower()
-    name = lead_data.get("name", "Customer")
-    req = lead_data.get("property_requirement", "property")
-    loc = lead_data.get("location", "the area")
-    budget = lead_data.get("budget", "stated budget")
-    timeline = lead_data.get("buying_timeline", "")
+    cfg = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        thinking_config=types.ThinkingConfig(thinking_level="low"),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
 
-    if "emphasize" in q or "call" in q:
-        return (
-            f"On your call with {name}, emphasize:\n"
-            f"1. Exact match for {req} within their {budget} range.\n"
-            f"2. Availability of units fitting their '{timeline}' timeline.\n"
-            f"3. Offer a scheduled in-person visit slot for this weekend rather than a vague callback."
-        )
-    elif "concern" in q or "objection" in q:
-        objs = ai_analysis.get("objections", ["Pricing clarity", "Legal verification"])
-        return (
-            f"Based on {name}'s requirements, address these proactively:\n"
-            + "\n".join([f"• {o}" for o in objs])
-            + "\n\nTip: Assure them on approved documentation before asking for a site visit."
-        )
-    elif "assertive" in q:
-        return (
-            f'Assertive pitch for {name}:\n'
-            f'"Hi {name}, verified inventory for {req} in {loc} within {budget} is limited and moves quickly. '
-            f'Since you are planning to purchase within {timeline}, I have reserved two site visit slots for Saturday at 11 AM and 3 PM. '
-            f'Which time works best to lock in your visit?"'
-        )
-    else:
-        return (
-            f"For {name} looking for {req} in {loc} ({budget}):\n"
-            f"Focus on their stated timeline of '{timeline}'. Share 2 curated brochures, follow up via phone, "
-            f"and propose a concrete site visit slot."
-        )
+    logger.info(
+        "GEMINI CHAT INPUT:\nlead = %s\nlatest_question = %s\nhistory_length = %d",
+        lead_data.get("name", "Unknown"),
+        question,
+        len(history) if history else 0,
+    )
+
+    response = _generate_with_gemini(contents=user_content, config=cfg)
+    return response.text.strip()
 
 
 def generate_followup_ai(
     lead_data: Dict[str, Any], channel: str, tone: str, instruction: Optional[str] = None
 ) -> str:
-    """Generate channel- and tone-tailored follow-up communication."""
-    client = get_gemini_client()
+    """Generate channel- and tone-tailored follow-up communication using Gemini.
 
+    Never returns hardcoded or fake static responses.
+    Raises HTTPException 503 if Gemini is unavailable.
+    """
     name = lead_data.get("name", "Customer")
     req = lead_data.get("property_requirement", "property")
     loc = lead_data.get("location", "the city")
     budget = lead_data.get("budget", "stated budget")
     timeline = lead_data.get("buying_timeline", "soon")
 
-    if client:
-        prompt = f"""
+    prompt = f"""
 You are a top-performing real estate salesperson. Generate a personalized follow-up message for:
 - Customer Name: {name}
 - Requirement: {req}
@@ -335,100 +295,18 @@ Formatting Rules:
 - If Call Script: Provide a structured conversational script with Opening, Context, Objection Handling, and Firm Close.
 - Reference their exact requirement ({req}), location ({loc}), and budget ({budget}) naturally.
 """
-        try:
-            response = client.models.generate_content(
-                model=settings.gemini_model,
-                contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.5),
-            )
-            if response and response.text:
-                return response.text.strip()
-        except Exception as e:
-            logger.warning("Gemini follow-up generation failed: %s. Using contextual generator.", e)
 
-    # Fallback tailored follow-up
-    ch = channel.lower()
-    t = tone.lower()
+    cfg = types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_level="low"),
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
 
-    if "whatsapp" in ch:
-        if "friendly" in t:
-            return (
-                f"Hey {name}! 👋 Hope you're having a good week.\n\n"
-                f"I found two great options for a {req} in {loc} that sit comfortably inside your {budget} budget. "
-                f"They match your plan to move {timeline}!\n\n"
-                f"Can I share the photos and floor plans with you here? Cheers!"
-            )
-        elif "assertive" in t:
-            return (
-                f"Hi {name}, following up on your search for a {req} in {loc}.\n\n"
-                f"Ready inventory in your {budget} bracket has high demand this month. "
-                f"I can hold an inspection appointment for you this weekend before general public viewings. "
-                f"Please let me know if Saturday at 11 AM or Sunday at 3 PM works best for you."
-            )
-        elif "urgent" in t:
-            return (
-                f"Urgent update for {name}: Two premium {req} units in {loc} matching your {budget} budget "
-                f"just became available. Given your '{timeline}' timeline, I strongly advise viewing them today. "
-                f"Can I give you a quick call in 10 minutes?"
-            )
-        else:  # Professional
-            return (
-                f"Dear {name}, thank you for your inquiry regarding {req} in {loc}.\n\n"
-                f"We have curated verified options aligned with your budget of {budget} and '{timeline}' timeline. "
-                f"Please let me know if I may send the project dossiers for your review."
-            )
+    logger.info(
+        "GEMINI FOLLOWUP INPUT:\nlead = %s\nchannel = %s\ntone = %s",
+        name,
+        channel,
+        tone,
+    )
 
-    elif "email" in ch:
-        if "friendly" in t:
-            return (
-                f"Subject: Great options for your {req} in {loc}! 🏡\n\n"
-                f"Hi {name},\n\n"
-                f"Hope you are having a wonderful week!\n\n"
-                f"I reviewed your requirement for a {req} in {loc}. We have two verified developments "
-                f"matching your {budget} budget with move-in options aligned with your '{timeline}' horizon.\n\n"
-                f"I have attached the floor plans and pricing breakdowns. Please feel free to reply with any questions!\n\n"
-                f"Warm regards,\nMasal AI Real Estate Team"
-            )
-        elif "assertive" in t:
-            return (
-                f"Subject: Recommended Properties: {req} in {loc} [Action Required]\n\n"
-                f"Dear {name},\n\n"
-                f"High-quality inventory for {req} in {loc} within {budget} is limited. "
-                f"To ensure you secure a prime unit within your '{timeline}' timeline, I recommend scheduling a 15-minute briefing.\n\n"
-                f"Please confirm whether tomorrow at 11:00 AM or 3:00 PM works for your calendar.\n\n"
-                f"Best regards,\nSales Team | Masal AI"
-            )
-        elif "urgent" in t:
-            return (
-                f"Subject: Priority Alert: Limited allocation for {req} in {loc}\n\n"
-                f"Dear {name},\n\n"
-                f"We are writing with an urgent update regarding your search for a {req} in {loc}. "
-                f"Current developer pricing for units within your {budget} bracket expires at the end of the week. "
-                f"Given your plan to purchase {timeline}, acting now will protect your preferred pricing.\n\n"
-                f"Please reply immediately or call me to reserve priority inspection access.\n\n"
-                f"Sincerely,\nMasal AI Advisory"
-            )
-        else:  # Professional
-            return (
-                f"Subject: Curated Property Portfolio: {req} in {loc}\n\n"
-                f"Dear {name},\n\n"
-                f"Thank you for contacting us regarding your requirement for a {req} in {loc} within {budget}.\n\n"
-                f"We have finalized a shortlisting of verified projects tailored to your purchase horizon of '{timeline}'. "
-                f"Each property holds verified RERA approvals and bank financing clearance.\n\n"
-                f"Attached please find the comprehensive project dossier. We look forward to coordinating a private site inspection.\n\n"
-                f"Sincerely,\nMasal AI Real Estate Advisory"
-            )
-
-    else:  # Call Script
-        return (
-            f"[CALL SCRIPT — {tone.upper()} TONE]\n"
-            f"Lead: {name} | Requirement: {req} | Location: {loc} | Budget: {budget}\n\n"
-            f"1. GREETING:\n"
-            f'"Hello {name}, this is [Your Name] from Masal AI Realty following up on your inquiry for a {req} in {loc}."\n\n'
-            f"2. CONTEXT & VALUE:\n"
-            f'"We have 2 verified options matching your {budget} bracket with possession aligned to your {timeline} timeline."\n\n'
-            f"3. DISCOVERY:\n"
-            f'"You mentioned in your message: \'{lead_data.get("customer_message", "")}\'. Are there specific layout or parking preferences you want prioritized?"\n\n'
-            f"4. CLOSING / NEXT STEP:\n"
-            f'"I can arrange a priority site visit for you this Saturday. Does morning or afternoon suit your schedule better?"'
-        )
+    response = _generate_with_gemini(contents=prompt, config=cfg)
+    return response.text.strip()

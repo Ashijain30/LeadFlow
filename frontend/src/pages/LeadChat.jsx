@@ -48,7 +48,7 @@ export default function LeadChat({ lead, onBack }) {
   ];
 
   const handleSendMessage = async (textToSend) => {
-    const text = textToSend || inputText;
+    const text = typeof textToSend === 'string' && textToSend.trim() ? textToSend : inputText;
     if (!text.trim() || isTyping) return;
 
     const userMessage = {
@@ -63,10 +63,17 @@ export default function LeadChat({ lead, onBack }) {
     setIsTyping(true);
 
     try {
-      const historyPayload = messages.map((m) => ({
-        sender: m.sender,
-        text: m.text,
-      }));
+      // Exclude error messages and initial greeting from conversational context
+      const historyPayload = messages
+        .filter((m) => !m.isError && m.id !== 1)
+        .map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        }));
+
+      // Phase 3 required logging
+      console.log(`CHAT REQUEST:\nleadId = ${lead.id}\nmessage = "${text.trim()}"\nhistory =`, historyPayload);
+
       const res = await chatWithLead(lead.id, text.trim(), historyPayload);
       const replyText = res.response || res.text;
 
@@ -78,17 +85,16 @@ export default function LeadChat({ lead, onBack }) {
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      console.warn('Real AI chat endpoint error, using contextual fallback:', err);
-      const fallbackReply = `For ${lead.name} (${req} in ${loc}, budget ${budget}):
-Focus on locking in an inspection slot this weekend. Overcome their concerns around pricing clarity and confirmed RERA delivery timelines before negotiating discounts.`;
-
-      const assistantMessage = {
+      console.error('Chat API request failed:', err);
+      const errorMsg = err.message || 'Gemini is temporarily unavailable. Please try again shortly.';
+      const errorMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        text: fallbackReply,
+        text: `⚠️ ${errorMsg}`,
+        isError: true,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }

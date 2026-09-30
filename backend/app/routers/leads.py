@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from app.schemas import (
 )
 from app.services import lead_service, ai_service
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/leads", tags=["Leads"])
 
 
@@ -29,8 +31,8 @@ def list_leads(
 
 @router.post("", response_model=LeadResponse, status_code=status.HTTP_201_CREATED)
 def create_lead(lead_in: LeadCreate, db: Session = Depends(get_db)):
-    """Create a new lead with automatic priority scoring and initial AI analysis."""
-    return lead_service.create_lead(db, lead_in, run_ai=True)
+    """Create a new lead with automatic priority scoring."""
+    return lead_service.create_lead(db, lead_in, run_ai=False)
 
 
 @router.get("/{lead_id}", response_model=LeadResponse)
@@ -127,6 +129,13 @@ def chat_with_lead(
         "ai_analysis": lead.ai_analysis,
     }
 
+    logger.info(
+        "CHAT API:\nlead_id = %s\nincoming_message = %s\nhistory_length = %d",
+        lead_id,
+        chat_in.message,
+        len(chat_in.history) if chat_in.history else 0,
+    )
+
     ai_reply = ai_service.chat_with_lead_ai(
         lead_data=lead_data,
         question=chat_in.message,
@@ -159,6 +168,13 @@ def generate_followup(
         "customer_message": lead.customer_message,
         "priority": lead.priority,
     }
+
+    logger.info(
+        "FOLLOWUP API:\nlead_id = %s\nchannel = %s\ntone = %s",
+        lead_id,
+        followup_in.channel,
+        followup_in.tone,
+    )
 
     content = ai_service.generate_followup_ai(
         lead_data=lead_data,
